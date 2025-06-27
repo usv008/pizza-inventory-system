@@ -300,6 +300,7 @@
                         <option value="3">3 дні</option>
                         <option value="7">7 днів</option>
                         <option value="30">30 днів</option>
+                        <option value="90">90 днів</option>
                     </select>
                 </div>
             </div>
@@ -380,7 +381,7 @@
         
                 <div class="arrival-form-actions">
                     <button type="submit" class="arrival-submit-btn">
-                        💾 Зберегти документ
+                        💾 Зберегти документ приходу
                     </button>
                 </div>
             </form>
@@ -433,6 +434,7 @@
                 logError('Failed to initialize inventory page', 'PAGE_INIT_ERROR', error);
                 showUserError('Помилка ініціалізації сторінки');
             }
+            populateBatchProductFilter();
         }
 
         function setupDateFields() {
@@ -802,6 +804,7 @@
                 
                 products = await response.json();
                 updateProductSelects();
+                populateBatchProductFilter();
                 
             } catch (error) {
                 logError('Failed to load products', 'PRODUCTS_LOAD_ERROR', error);
@@ -1235,105 +1238,248 @@
 
         // Управління партіями
         async function loadBatchesWithFilter() {
-            const loadingEl = safeQuerySelector('#batches-loading');
-            const contentEl = safeQuerySelector('#batches-content');
-            
-            try {
-                if (loadingEl) loadingEl.style.display = 'block';
-                if (contentEl) contentEl.style.display = 'none';
+    const loadingEl = safeQuerySelector('#batches-loading');
+    const contentEl = safeQuerySelector('#batches-content');
+    
+    try {
+        if (loadingEl) loadingEl.style.display = 'block';
+        if (contentEl) contentEl.style.display = 'none';
 
-                const response = await fetch(`${API_URL}/batches/grouped`);
-                if (!response.ok) throw new Error('Помилка завантаження партій');
+        console.log('🔄 Завантажую партії...');
+        const response = await fetch(`${API_URL}/batches/grouped`);
+        
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+        
+        if (!response.ok) throw new Error('Помилка завантаження партій');
+        
+        const batchesData = await response.json();
+console.log('Raw batches data received:', batchesData.length, 'products');
+
+        // Застосовуємо фільтри якщо функція існує
+        const filteredData = typeof applyBatchesFilters === 'function' ? 
+            applyBatchesFilters(batchesData) : batchesData;
+
+        console.log('Filtered data:', filteredData.length, 'products');
+        displayBatches(filteredData);
                 
-                const batchesData = await response.json();
-                displayBatches(batchesData);
-                
-                if (loadingEl) loadingEl.style.display = 'none';
-                if (contentEl) contentEl.style.display = 'block';
-            } catch (error) {
-                logError('Failed to load batches', 'BATCHES_LOAD_ERROR', error);
-                if (loadingEl) loadingEl.innerHTML = 'Помилка завантаження партій';
-            }
-        }
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (contentEl) contentEl.style.display = 'block';
+    } catch (error) {
+        console.error('❌ Помилка завантаження партій:', error);
+        if (loadingEl) loadingEl.innerHTML = 'Помилка завантаження партій: ' + error.message;
+    }
+}
 
         function displayBatches(productsWithBatches) {
-            const grid = safeQuerySelector('#batches-grid');
-            const summary = safeQuerySelector('#batches-summary');
-            
-            if (!grid) return;
+    console.log('=== displayBatches ВИКЛИКАНО ===');
+    console.log('Products with batches:', productsWithBatches);
+    
+    const grid = safeQuerySelector('#batches-grid');
+    const summary = safeQuerySelector('#batches-summary');
+    
+    if (!grid) {
+        console.error('Batches grid element not found!');
+        return;
+    }
+    
+    console.log('Grid element found:', grid);
 
-            // Оновлюємо підсумок
-            const totalBatches = productsWithBatches.reduce((sum, p) => sum + (p.batches_count || 0), 0);
-            const totalQuantity = productsWithBatches.reduce((sum, p) => sum + (p.total_available || 0), 0);
+    // Фільтруємо тільки товари з активними партіями
+    const productsWithActiveBatches = productsWithBatches.filter(product => 
+        product.batches && product.batches.some(batch => batch.available_quantity > 0)
+    );
+
+    // Оновлюємо підсумок
+    const totalBatches = productsWithActiveBatches.reduce((sum, p) => {
+        const activeBatches = p.batches.filter(b => b.available_quantity > 0);
+        return sum + activeBatches.length;
+    }, 0);
+    
+    const totalQuantity = productsWithActiveBatches.reduce((sum, p) => sum + (p.total_available || 0), 0);
+    
+    console.log('Total active batches:', totalBatches);
+    console.log('Total quantity:', totalQuantity);
+    
+    if (summary) {
+        const countEl = safeQuerySelector('#batches-total-count');
+        const quantityEl = safeQuerySelector('#batches-total-quantity');
+        if (countEl) {
+            countEl.textContent = totalBatches;
+            console.log('Updated total count display');
+        }
+        if (quantityEl) {
+            quantityEl.textContent = totalQuantity;
+            console.log('Updated total quantity display');
+        }
+    }
+
+    // Перевіряємо чи є активні партії
+    if (productsWithActiveBatches.length === 0) {
+        grid.innerHTML = `
+            <div class="batches-empty" style="grid-column: 1 / -1;">
+                <h3>📦 Немає активних партій</h3>
+                <p>Всі партії вичерпані або не створені</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Генеруємо картки товарів з партіями
+    const batchesHTML = productsWithActiveBatches.map((product, index) => {
+        console.log(`Processing product ${index}:`, product.product_name);
+        
+        // Фільтруємо тільки активні партії
+        const activeBatches = product.batches.filter(batch => batch.available_quantity > 0);
+        const stockClass = getStockClass(product.stock_status);
+        const hasExpiring = activeBatches.some(batch => batch.status === 'EXPIRING');
+        
+        let cardClass = 'pizza-card';
+        if (hasExpiring) cardClass += ' has-expiring';
+        
+        const batchesListHTML = activeBatches.map(batch => {
+            const batchDate = new Date(batch.batch_date).toLocaleDateString('uk-UA');
+            const boxes = Math.floor(batch.available_quantity / product.pieces_per_box);
+            const pieces = batch.available_quantity % product.pieces_per_box;
             
-            if (summary) {
-                const countEl = safeQuerySelector('#batches-total-count');
-                const quantityEl = safeQuerySelector('#batches-total-quantity');
-                if (countEl) countEl.textContent = totalBatches;
-                if (quantityEl) quantityEl.textContent = totalQuantity;
+            let statusClass = 'active';
+            let statusText = 'Активна';
+            
+            if (batch.status === 'EXPIRED') {
+                statusClass = 'expired';
+                statusText = 'Прострочена';
+            } else if (batch.status === 'EXPIRING') {
+                statusClass = 'expiring';
+                statusText = `${batch.days_to_expiry} дн.`;
             }
-
-            // Генеруємо картки товарів з партіями
-            const batchesHTML = productsWithBatches.map(product => {
-                const stockClass = getStockClass(product.stock_status);
-                const hasExpiring = product.expiring_quantity > 0;
-                
-                let cardClass = 'pizza-card';
-                if (hasExpiring) cardClass += ' has-expiring';
-                
-                const batchesListHTML = product.batches.map(batch => {
-                    const batchDate = new Date(batch.batch_date).toLocaleDateString('uk-UA');
-                    const boxes = Math.floor(batch.available_quantity / product.pieces_per_box);
-                    const pieces = batch.available_quantity % product.pieces_per_box;
-                    
-                    let statusClass = 'active';
-                    let statusText = 'Активна';
-                    
-                    if (batch.status === 'EXPIRED') {
-                        statusClass = 'expired';
-                        statusText = 'Прострочена';
-                    } else if (batch.status === 'EXPIRING') {
-                        statusClass = 'expiring';
-                        statusText = `${batch.days_to_expiry} дн.`;
-                    }
-                    
-                    return `
-                        <div class="batch-item ${statusClass}" style="margin-bottom: 0.5rem;">
-                            <div class="batch-info">
-                                <div class="batch-date">${batchDate}</div>
-                                <div class="batch-details">
-                                    <span class="batch-status ${statusClass}">${statusText}</span>
-                                </div>
-                            </div>
-                            <div class="batch-quantity">
-                                <div class="batch-quantity-main">${batch.available_quantity} шт</div>
-                                <div class="batch-quantity-sub">${boxes} ящ + ${pieces} шт</div>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-                
-                return `
-                    <div class="${cardClass}">
-                        <div class="pizza-name">${product.product_name}</div>
-                        <div class="pizza-stock ${stockClass}">${product.total_available || 0} шт</div>
-                        <div class="pizza-details">
-                            Код: ${product.product_code}<br>
-                            Ящиків: ${product.total_boxes || 0}<br>
-                            Партій: <strong>${product.batches_count || 0}</strong>
-                        </div>
-                        <div class="batches-container">
-                            <div class="batches-title">📦 Партії:</div>
-                            <div style="max-height: 200px; overflow-y: auto; margin-top: 0.5rem;">
-                                ${batchesListHTML || '<div class="batches-empty">Немає партій</div>'}
-                            </div>
+            
+            return `
+                <div class="batch-item ${statusClass}">
+                    <div class="batch-info">
+                        <div class="batch-date">${batchDate}</div>
+                        <div class="batch-details">
+                            <span class="batch-status ${statusClass}">${statusText}</span>
                         </div>
                     </div>
-                `;
-            }).join('');
+                    <div class="batch-quantity">
+                        <div class="batch-quantity-main">${batch.available_quantity} шт</div>
+                        <div class="batch-quantity-sub">${boxes} ящ + ${pieces} шт</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        // Підраховуємо активні партії для цього товару
+        const activeBatchesCount = activeBatches.length;
+        const totalAvailable = activeBatches.reduce((sum, batch) => sum + batch.available_quantity, 0);
+        const totalBoxes = Math.floor(totalAvailable / product.pieces_per_box);
+        
+        return `
+            <div class="${cardClass}">
+                <div class="stock-indicator ${stockClass}"></div>
+                <div class="pizza-name">${product.product_name}</div>
+                <div class="pizza-stock ${stockClass}">${totalAvailable} шт</div>
+                <div class="pizza-details">
+                    <strong>Код:</strong> ${product.product_code}<br>
+                    <strong>Ящиків:</strong> ${totalBoxes}<br>
+                    <strong>Партій:</strong> ${activeBatchesCount}<br>
+                    <strong>Мін. залишок:</strong> ${product.min_stock_pieces} шт
+                </div>
+                <div class="batches-container">
+                    <div class="batches-title">Партії товару</div>
+                    <div class="batches-list">
+                        ${batchesListHTML || '<div class="batches-empty">Немає активних партій</div>'}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
 
-            grid.innerHTML = batchesHTML;
-        }
+    console.log('Generated HTML length:', batchesHTML.length);
+    grid.innerHTML = batchesHTML;
+    console.log('Grid updated with HTML');
+    console.log('=== displayBatches ЗАВЕРШЕНО ===');
+}
+            function applyBatchesFilters(batchesData) {
+                // Отримуємо значення фільтрів
+                const productFilter = safeQuerySelector('#batch-filter-product')?.value;
+                const statusFilter = safeQuerySelector('#batch-filter-status')?.value;
+                const daysFilter = safeQuerySelector('#batch-filter-days')?.value;
+                
+                console.log('Applying filters:', { productFilter, statusFilter, daysFilter });
+                
+                // Якщо немає фільтрів, повертаємо всі дані
+                if (!productFilter && !statusFilter && !daysFilter) {
+                    return batchesData;
+                }
+                
+                let filteredData = [...batchesData];
+                
+                // Фільтр по товару
+                if (productFilter) {
+                    filteredData = filteredData.filter(product => 
+                        product.product_id == productFilter
+                    );
+                }
+                
+                // Фільтр по статусу та днях
+                if (statusFilter || daysFilter) {
+                    filteredData = filteredData.map(product => {
+                        let filteredBatches = [...(product.batches || [])];
+                        
+                        // Фільтр по статусу
+                        if (statusFilter) {
+                            switch (statusFilter) {
+                                case 'ACTIVE':
+                                    filteredBatches = filteredBatches.filter(batch => 
+                                        batch.available_quantity > 0 && 
+                                        batch.status !== 'EXPIRED' && 
+                                        batch.status !== 'EXPIRING'
+                                    );
+                                    break;
+                                case 'EXPIRING':
+                                    filteredBatches = filteredBatches.filter(batch => 
+                                        batch.status === 'EXPIRING' || 
+                                        (batch.days_to_expiry <= 7 && batch.days_to_expiry > 0)
+                                    );
+                                    break;
+                                case 'EXPIRED':
+                                    filteredBatches = filteredBatches.filter(batch => 
+                                        batch.status === 'EXPIRED' || 
+                                        batch.days_to_expiry <= 0
+                                    );
+                                    break;
+                                case 'DEPLETED':
+                                    filteredBatches = filteredBatches.filter(batch => 
+                                        batch.available_quantity <= 0
+                                    );
+                                    break;
+                            }
+                        }
+                        
+                        // Фільтр по днях
+                        if (daysFilter) {
+                            const daysLimit = parseInt(daysFilter);
+                            filteredBatches = filteredBatches.filter(batch => 
+                                batch.days_to_expiry <= daysLimit && batch.days_to_expiry >= 0
+                            );
+                        }
+                        
+                        // Повертаємо товар тільки якщо є партії
+                        if (filteredBatches.length > 0) {
+                            return {
+                                ...product,
+                                batches: filteredBatches,
+                                batches_count: filteredBatches.length,
+                                total_available: filteredBatches.reduce((sum, b) => sum + (b.available_quantity || 0), 0)
+                            };
+                        }
+                        return null;
+                    }).filter(product => product !== null);
+                }
+                
+                return filteredData;
+            }
 
         async function loadExpiringBatches() {
             try {
@@ -1478,6 +1624,37 @@
         window.setTabHandler = function(tab, fn) {
             window._tabHandlers[tab] = fn;
         };
+        window._tabHandlers = window._tabHandlers || {};
+        window._tabHandlers['batches'] = function() {
+        loadBatchesWithFilter();
+};
+        function populateBatchProductFilter() {
+            const productFilter = safeQuerySelector('#batch-filter-product');
+            if (!productFilter || !products || products.length === 0) {
+                return;
+            }
+            
+            // Зберігаємо поточне значення
+            const currentValue = productFilter.value;
+            
+            // Очищуємо опції (крім першої "Всі товари")
+            while (productFilter.children.length > 1) {
+                productFilter.removeChild(productFilter.lastChild);
+            }
+            
+            // Додаємо товари
+            products.forEach(product => {
+                const option = document.createElement('option');
+                option.value = product.id;
+                option.textContent = `${product.name} (${product.code})`;
+                productFilter.appendChild(option);
+            });
+            
+            // Відновлюємо значення
+            productFilter.value = currentValue;
+            
+            console.log('Популяція фільтру товарів завершена:', products.length, 'товарів');
+        }
     </script>
 </body>
 </html>
