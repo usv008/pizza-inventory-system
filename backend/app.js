@@ -720,9 +720,9 @@ app.delete('/api/clients/:id', async (req, res) => {
 // ================================
 
 
-// ПОВНІСТЮ замінити PUT роут в app.js - СПРОЩЕНА ВЕРСІЯ
-app.put('/api/orders/:id', (req, res) => {
-    console.log('🚀🚀🚀 ПРОСТИЙ PUT РОУТ ВИКЛИКАНО 🚀🚀🚀');
+// ПОВНІСТЮ замінити PUT роут в app.js - ВЕРСІЯ З ПАРТІЯМИ
+app.put('/api/orders/:id', async (req, res) => {
+    console.log('🚀🚀🚀 PUT РОУТ З ПАРТІЯМИ ВИКЛИКАНО 🚀🚀🚀');
     console.log('Order ID:', req.params.id, typeof req.params.id);
     console.log('Request body:', JSON.stringify(req.body, null, 2));
     
@@ -737,7 +737,7 @@ app.put('/api/orders/:id', (req, res) => {
     const { db } = require('./database');
     
     // Спочатку перевіримо поточні дані
-    db.get('SELECT * FROM orders WHERE id = ?', [orderId], (err, beforeUpdate) => {
+    db.get('SELECT * FROM orders WHERE id = ?', [orderId], async (err, beforeUpdate) => {
         if (err) {
             console.error('Error checking current order:', err);
             return res.status(500).json({ error: 'Database error: ' + err.message });
@@ -750,154 +750,246 @@ app.put('/api/orders/:id', (req, res) => {
             return res.status(404).json({ error: 'Замовлення не знайдено в базі' });
         }
         
-        // Оновлюємо основну інформацію
-        const sql = `UPDATE orders 
-                   SET client_name = ?, 
-                       client_contact = ?, 
-                       delivery_date = ?, 
-                       notes = ?, 
-                       status = ?, 
-                       updated_at = CURRENT_TIMESTAMP
-                   WHERE id = ?`;
-        
-        const params = [
-            client_name, 
-            client_contact || '', 
-            delivery_date || null, 
-            notes || '', 
-            status || beforeUpdate.status, 
-            orderId
-        ];
-        
-        console.log('SQL query:', sql);
-        console.log('SQL params:', params);
-        
-        db.run(sql, params, function(err) {
-            if (err) {
-                console.error('Database update error:', err);
-                return res.status(500).json({ error: 'Помилка оновлення основної інформації: ' + err.message });
-            }
+        try {
+            // КРОК 1: Звільняємо старі резерви партій
+            console.log('🔄 КРОК 1: Звільняю старі резерви партій...');
+            await BatchController.unreserveBatchesForOrder({ params: { orderId } }, null);
+            console.log('✅ Старі резерви звільнено');
             
-            console.log('Main info UPDATE result - changes:', this.changes, 'lastID:', this.lastID);
+            // КРОК 2: Оновлюємо основну інформацію
+            console.log('🔄 КРОК 2: Оновлюю основну інформацію замовлення...');
+            const sql = `UPDATE orders 
+                       SET client_name = ?, 
+                           client_contact = ?, 
+                           delivery_date = ?, 
+                           notes = ?, 
+                           status = ?, 
+                           updated_at = CURRENT_TIMESTAMP
+                       WHERE id = ?`;
             
-            // Якщо є позиції для оновлення
-            if (items && Array.isArray(items) && items.length > 0) {
-                console.log('Updating items:', items.length);
+            const params = [
+                client_name, 
+                client_contact || '', 
+                delivery_date || null, 
+                notes || '', 
+                status || beforeUpdate.status, 
+                orderId
+            ];
+            
+            console.log('SQL query:', sql);
+            console.log('SQL params:', params);
+            
+            db.run(sql, params, function(err) {
+                if (err) {
+                    console.error('Database update error:', err);
+                    return res.status(500).json({ error: 'Помилка оновлення основної інформації: ' + err.message });
+                }
                 
-                // Спочатку видаляємо старі позиції
-                db.run('DELETE FROM order_items WHERE order_id = ?', [orderId], function(deleteErr) {
-                    if (deleteErr) {
-                        console.error('Error deleting old items:', deleteErr);
-                        return res.status(500).json({ error: 'Помилка видалення старих позицій: ' + deleteErr.message });
-                    }
+                console.log('✅ Основна інформація оновлена, changes:', this.changes, 'lastID:', this.lastID);
+                
+                // КРОК 3: Оновлюємо позиції замовлення
+                if (items && Array.isArray(items) && items.length > 0) {
+                    console.log('🔄 КРОК 3: Оновлюю позиції замовлення...');
                     
-                    console.log('Deleted old items, changes:', this.changes);
-                    
-                    // Тепер додаємо нові позиції
-                    let itemsProcessed = 0;
-                    let itemsToAdd = 0;
-                    let hasErrors = false;
-                    let totalQuantity = 0;
-                    let totalBoxes = 0;
-                    
-                    // Підраховуємо скільки позицій потрібно додати
-                    items.forEach(item => {
-                        if (item.product_id && item.quantity && item.quantity > 0) {
-                            itemsToAdd++;
+                    // Спочатку видаляємо старі позиції
+                    db.run('DELETE FROM order_items WHERE order_id = ?', [orderId], function(deleteErr) {
+                        if (deleteErr) {
+                            console.error('Error deleting old items:', deleteErr);
+                            return res.status(500).json({ error: 'Помилка видалення старих позицій: ' + deleteErr.message });
                         }
-                    });
-                    
-                    if (itemsToAdd === 0) {
-                        return res.json({ 
-                            message: 'Замовлення оновлено успішно (тільки основна інформація)',
-                            orderId: orderId,
-                            itemsUpdated: 0
-                        });
-                    }
-                    
-                    // Додаємо кожну позицію
-                    items.forEach((item, index) => {
-                        const { product_id, quantity, notes: itemNotes } = item;
                         
-                        if (!product_id || !quantity || quantity <= 0) {
-                            console.log(`Skipping item ${index} - invalid data:`, item);
+                        console.log('✅ Старі позиції видалено, changes:', this.changes);
+                        
+                        // Тепер додаємо нові позиції
+                        let itemsProcessed = 0;
+                        let itemsToAdd = 0;
+                        let hasErrors = false;
+                        let totalQuantity = 0;
+                        let totalBoxes = 0;
+                        
+                        // Підраховуємо скільки позицій потрібно додати
+                        items.forEach(item => {
+                            if (item.product_id && item.quantity && item.quantity > 0) {
+                                itemsToAdd++;
+                            }
+                        });
+                        
+                        if (itemsToAdd === 0) {
+                            console.log('✅ Немає позицій для додавання');
+                            finishWithoutBatchReservation();
                             return;
                         }
                         
-                        // Спочатку отримуємо інформацію про товар
-                        db.get('SELECT pieces_per_box FROM products WHERE id = ?', [product_id], (productErr, product) => {
-                            if (productErr) {
-                                console.error(`Error getting product ${product_id}:`, productErr);
-                                hasErrors = true;
+                        // Додаємо кожну позицію
+                        items.forEach((item, index) => {
+                            const { product_id, quantity, notes: itemNotes } = item;
+                            
+                            if (!product_id || !quantity || quantity <= 0) {
+                                console.log(`Skipping item ${index} - invalid data:`, item);
                                 return;
                             }
                             
-                            if (!product) {
-                                console.error(`Product not found: ${product_id}`);
-                                hasErrors = true;
-                                return;
-                            }
-                            
-                            const quantityNum = parseInt(quantity);
-                            const boxes = Math.floor(quantityNum / product.pieces_per_box);
-                            const pieces = quantityNum % product.pieces_per_box;
-                            
-                            totalQuantity += quantityNum;
-                            totalBoxes += boxes;
-                            
-                            // Додаємо позицію
-                            const insertSql = `INSERT INTO order_items 
-                                             (order_id, product_id, quantity, boxes, pieces, notes, created_at) 
-                                             VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`;
-                            
-                            db.run(insertSql, [orderId, product_id, quantityNum, boxes, pieces, itemNotes || ''], function(insertErr) {
-                                if (insertErr) {
-                                    console.error(`Error inserting item ${index}:`, insertErr);
+                            // Спочатку отримуємо інформацію про товар
+                            db.get('SELECT pieces_per_box FROM products WHERE id = ?', [product_id], (productErr, product) => {
+                                if (productErr) {
+                                    console.error(`Error getting product ${product_id}:`, productErr);
                                     hasErrors = true;
                                     return;
                                 }
                                 
-                                console.log(`Item ${index} inserted with ID:`, this.lastID);
-                                itemsProcessed++;
+                                if (!product) {
+                                    console.error(`Product not found: ${product_id}`);
+                                    hasErrors = true;
+                                    return;
+                                }
                                 
-                                // Коли всі позиції оброблені
-                                if (itemsProcessed === itemsToAdd) {
-                                    if (hasErrors) {
-                                        return res.status(500).json({ error: 'Деякі позиції не вдалося додати' });
+                                const quantityNum = parseInt(quantity);
+                                const boxes = Math.floor(quantityNum / product.pieces_per_box);
+                                const pieces = quantityNum % product.pieces_per_box;
+                                
+                                totalQuantity += quantityNum;
+                                totalBoxes += boxes;
+                                
+                                // Додаємо позицію (поки без allocated_batches)
+                                const insertSql = `INSERT INTO order_items 
+                                                 (order_id, product_id, quantity, boxes, pieces, notes, created_at) 
+                                                 VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`;
+                                
+                                db.run(insertSql, [orderId, product_id, quantityNum, boxes, pieces, itemNotes || ''], function(insertErr) {
+                                    if (insertErr) {
+                                        console.error(`Error inserting item ${index}:`, insertErr);
+                                        hasErrors = true;
+                                        return;
                                     }
                                     
-                                    // Оновлюємо загальні кількості
-                                    db.run('UPDATE orders SET total_quantity = ?, total_boxes = ? WHERE id = ?', 
-                                          [totalQuantity, totalBoxes, orderId], function(updateTotalErr) {
-                                        if (updateTotalErr) {
-                                            console.error('Error updating totals:', updateTotalErr);
-                                            // Не блокуємо відповідь через це
+                                    console.log(`✅ Item ${index} inserted with ID:`, this.lastID);
+                                    itemsProcessed++;
+                                    
+                                    // Коли всі позиції оброблені
+                                    if (itemsProcessed === itemsToAdd) {
+                                        if (hasErrors) {
+                                            return res.status(500).json({ error: 'Деякі позиції не вдалося додати' });
                                         }
                                         
-                                        console.log('✅ Order updated successfully');
-                                        res.json({ 
-                                            message: 'Замовлення оновлено успішно',
-                                            orderId: orderId,
-                                            itemsUpdated: itemsProcessed,
-                                            totalQuantity: totalQuantity,
-                                            totalBoxes: totalBoxes
+                                        // Оновлюємо загальні кількості
+                                        db.run('UPDATE orders SET total_quantity = ?, total_boxes = ? WHERE id = ?', 
+                                              [totalQuantity, totalBoxes, orderId], (updateTotalErr) => {
+                                            if (updateTotalErr) {
+                                                console.error('Error updating totals:', updateTotalErr);
+                                                // Не блокуємо відповідь через це
+                                            }
+                                            
+                                            console.log('✅ Загальні кількості оновлено');
+                                            
+                                            // КРОК 4: Резервуємо партії для нових позицій
+                                            reserveBatchesForNewItems();
                                         });
-                                    });
-                                }
+                                    }
+                                });
                             });
                         });
+                        
+                        async function reserveBatchesForNewItems() {
+                            try {
+                                console.log('🔄 КРОК 4: Резервую партії для нових позицій...');
+                                
+                                const reservationResult = await BatchController.reserveBatchesForOrderItems(
+                                    { params: { orderId }, body: { items } }, 
+                                    null
+                                );
+                                
+                                console.log('✅ Партії зарезервовано:', reservationResult);
+                                
+                                // КРОК 5: Оновлюємо allocated_batches в позиціях
+                                updateAllocatedBatchesInItems(reservationResult.reservations);
+                                
+                            } catch (batchError) {
+                                console.error('Помилка резервування партій:', batchError);
+                                // Продовжуємо без резервування партій
+                                finishWithoutBatchReservation();
+                            }
+                        }
+                        
+                        function updateAllocatedBatchesInItems(reservations) {
+                            console.log('🔄 КРОК 5: Оновлюю allocated_batches в позиціях...');
+                            
+                            let updatesProcessed = 0;
+                            
+                            reservations.forEach(reservation => {
+                                const { product_id, allocated_batches } = reservation;
+                                
+                                if (allocated_batches && allocated_batches.length > 0) {
+                                    const allocatedBatchesJson = JSON.stringify(allocated_batches);
+                                    
+                                    db.run(
+                                        'UPDATE order_items SET allocated_batches = ? WHERE order_id = ? AND product_id = ?',
+                                        [allocatedBatchesJson, orderId, product_id],
+                                        function(updateErr) {
+                                            if (updateErr) {
+                                                console.error(`Error updating allocated_batches for product ${product_id}:`, updateErr);
+                                            } else {
+                                                console.log(`✅ allocated_batches оновлено для товару ${product_id}`);
+                                            }
+                                            
+                                            updatesProcessed++;
+                                            if (updatesProcessed === reservations.length) {
+                                                finishSuccessfully();
+                                            }
+                                        }
+                                    );
+                                } else {
+                                    updatesProcessed++;
+                                    if (updatesProcessed === reservations.length) {
+                                        finishSuccessfully();
+                                    }
+                                }
+                            });
+                            
+                            if (reservations.length === 0) {
+                                finishSuccessfully();
+                            }
+                        }
+                        
+                        function finishSuccessfully() {
+                            console.log('🎉 ВСІ КРОКИ ЗАВЕРШЕНО УСПІШНО!');
+                            res.json({ 
+                                message: 'Замовлення оновлено успішно з резервуванням партій',
+                                orderId: orderId,
+                                itemsUpdated: itemsProcessed,
+                                totalQuantity: totalQuantity,
+                                totalBoxes: totalBoxes,
+                                batchesReserved: true
+                            });
+                        }
+                        
+                        function finishWithoutBatchReservation() {
+                            console.log('✅ Замовлення оновлено без резервування партій');
+                            res.json({ 
+                                message: 'Замовлення оновлено успішно (без резервування партій)',
+                                orderId: orderId,
+                                itemsUpdated: itemsProcessed || 0,
+                                totalQuantity: totalQuantity || 0,
+                                totalBoxes: totalBoxes || 0,
+                                batchesReserved: false
+                            });
+                        }
                     });
-                });
-            } else {
-                // Тільки основна інформація оновлена
-                console.log('✅ Order main info updated successfully');
-                res.json({ 
-                    message: 'Замовлення оновлено успішно',
-                    orderId: orderId,
-                    itemsUpdated: 0
-                });
-            }
-        });
+                } else {
+                    // Тільки основна інформація оновлена
+                    console.log('✅ Order main info updated successfully');
+                    res.json({ 
+                        message: 'Замовлення оновлено успішно',
+                        orderId: orderId,
+                        itemsUpdated: 0,
+                        batchesReserved: false
+                    });
+                }
+            });
+            
+        } catch (error) {
+            console.error('Помилка в процесі оновлення замовлення:', error);
+            res.status(500).json({ error: 'Помилка оновлення замовлення: ' + error.message });
+        }
     });
 });
 // Отримати всі замовлення

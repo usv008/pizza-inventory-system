@@ -1,11 +1,308 @@
-// controllers/batch-controller.js - Контролер для управління партіями
+// controllers/batch-controller.js - Розширений контролер з логікою резервування для редагування замовлень
 
 const { db } = require('../database');
 const OperationsLogController = require('./operations-log-controller');
 
 class BatchController {
     
-    // Отримати всі партії товару
+    // НОВИЙ: Звільнення всіх резервів замовлення
+    static async unreserveBatchesForOrder(req, res) {
+        try {
+            const { orderId } = req.params;
+            
+            console.log(`🔄 Звільняю резерви для замовлення ${orderId}`);
+            
+            return new Promise((resolve, reject) => {
+                db.serialize(() => {
+                    db.run('BEGIN TRANSACTION');
+                    
+                    // Отримуємо всі позиції замовлення з allocated_batches
+                    db.all(`
+                        SELECT oi.*, p.name as product_name
+                        FROM order_items oi
+                        JOIN products p ON oi.product_id = p.id
+                        WHERE oi.order_id = ?
+                    `, [orderId], (err, orderItems) => {
+                        if (err) {
+                            db.run('ROLLBACK');
+                            const error = { error: 'Помилка отримання позицій замовлення' };
+                            return res ? res.status(500).json(error) : reject(new Error(error.error));
+                        }
+                        
+                        if (orderItems.length === 0) {
+                            db.run('COMMIT');
+                            const result = { 
+                                message: 'Немає позицій для звільнення резервів',
+                                released_quantity: 0
+                            };
+                            return res ? res.json(result) : resolve(result);
+                        }
+                        
+                        let processedItems = 0;
+                        let totalReleased = 0;
+                        let hasError = false;
+                        
+                        orderItems.forEach(item => {
+                            if (hasError) return;
+                            
+                            let allocatedBatches = [];
+                            
+                            // Парсимо allocated_batches JSON
+                            if (item.allocated_batches) {
+                                try {
+                                    allocatedBatches = JSON.parse(item.allocated_batches);
+                                } catch (parseError) {
+                                    console.warn(`Помилка парсингу allocated_batches для позиції ${item.id}:`, parseError);
+                                }
+                            }
+                            
+                            // Звільняємо кожну зарезервовану партію
+                            if (allocatedBatches.length > 0) {
+                                let processedBatches = 0;
+                                
+                                allocatedBatches.forEach(batchAllocation => {
+                                    if (!batchAllocation.batch_id || !batchAllocation.quantity) {
+                                        processedBatches++;
+                                        checkItemCompleted();
+                                        return;
+                                    }
+                                    
+                                    const quantity = batchAllocation.quantity || batchAllocation.allocated_quantity || 0;
+                                    
+                                    // Звільняємо резерв у партії
+                                    db.run(`
+                                        UPDATE production_batches 
+                                        SET reserved_quantity = CASE WHEN reserved_quantity >= ? THEN reserved_quantity - ? ELSE 0 END,
+                                            available_quantity = available_quantity + ?,
+                                            updated_at = CURRENT_TIMESTAMP
+                                        WHERE id = ?
+                                    `, [quantity, quantity, quantity, batchAllocation.batch_id], function(err) {
+                                        if (err) {
+                                            console.warn(`Не вдалося звільнити резерв партії ${batchAllocation.batch_id}: ${err.message}`);
+                                        } else if (this.changes > 0) {
+                                            totalReleased += quantity;
+                                            console.log(`✅ Звільнено ${quantity} шт з партії ${batchAllocation.batch_id}`);
+                                        }
+                                        
+                                        processedBatches++;
+                                        checkItemCompleted();
+                                    });
+                                });
+                                
+                                function checkItemCompleted() {
+                                    if (processedBatches === allocatedBatches.length) {
+                                        processedItems++;
+                                        if (processedItems === orderItems.length) {
+                                            finishUnreservation();
+                                        }
+                                    }
+                                }
+                            } else {
+                                processedItems++;
+                                if (processedItems === orderItems.length) {
+                                    finishUnreservation();
+                                }
+                            }
+                        });
+                        
+                        function finishUnreservation() {
+                            if (hasError) return;
+                            
+                            db.run('COMMIT');
+                            console.log(`🎉 Звільнено резервів: ${totalReleased} шт для замовлення ${orderId}`);
+                            
+                            const result = {
+                                message: 'Резерви успішно звільнено',
+                                order_id: parseInt(orderId),
+                                released_quantity: totalReleased,
+                                items_processed: orderItems.length
+                            };
+                            
+                            res ? res.json(result) : resolve(result);
+                        }
+                    });
+                });
+            });
+            
+        } catch (error) {
+            console.error('Помилка звільнення резервів:', error);
+            if (res) {
+                res.status(500).json({ error: 'Помилка сервера при звільненні резервів' });
+            } else {
+                throw error;
+            }
+        }
+    }
+    
+    // НОВИЙ: Резервування партій для позицій замовлення
+    static async reserveBatchesForOrderItems(req, res) {
+        try {
+            const { orderId } = req.params;
+            const { items } = req.body; // [{ product_id, quantity, notes }]
+            
+            if (!items || !Array.isArray(items)) {
+                const error = { error: 'Некоректні дані позицій замовлення' };
+                return res ? res.status(400).json(error) : Promise.reject(new Error(error.error));
+            }
+            
+            console.log(`🔄 Резервую партії для замовлення ${orderId}, позицій: ${items.length}`);
+            
+            return new Promise(async (resolve, reject) => {
+                const reservationResults = [];
+                let totalReserved = 0;
+                
+                // Резервуємо партії для кожної позиції
+                for (const item of items) {
+                    const { product_id, quantity } = item;
+                    
+                    if (!product_id || !quantity || quantity <= 0) {
+                        continue;
+                    }
+                    
+                    try {
+                        const reservationResult = await BatchController.reserveBatchesForProduct(product_id, quantity);
+                        reservationResults.push({
+                            product_id: product_id,
+                            quantity_requested: quantity,
+                            ...reservationResult
+                        });
+                        
+                        totalReserved += reservationResult.quantity_reserved || 0;
+                    } catch (error) {
+                        console.error(`Помилка резервування для товару ${product_id}:`, error);
+                        reservationResults.push({
+                            product_id: product_id,
+                            quantity_requested: quantity,
+                            quantity_reserved: 0,
+                            shortage: quantity,
+                            error: error.message
+                        });
+                    }
+                }
+                
+                const result = {
+                    message: 'Резервування завершено',
+                    order_id: parseInt(orderId),
+                    total_reserved: totalReserved,
+                    reservations: reservationResults
+                };
+                
+                res ? res.json(result) : resolve(result);
+            });
+            
+        } catch (error) {
+            console.error('Помилка резервування партій для замовлення:', error);
+            if (res) {
+                res.status(500).json({ error: 'Помилка сервера при резервуванні партій' });
+            } else {
+                throw error;
+            }
+        }
+    }
+    
+    // ДОПОМІЖНИЙ: Резервування партій для одного товару
+    static async reserveBatchesForProduct(productId, quantityNeeded) {
+        return new Promise((resolve, reject) => {
+            // Отримуємо доступні партії (FIFO)
+            db.all(`
+                SELECT pb.*, p.pieces_per_box, p.name as product_name
+                FROM production_batches pb
+                JOIN products p ON pb.product_id = p.id
+                WHERE pb.product_id = ? 
+                  AND pb.status = 'ACTIVE' 
+                  AND pb.available_quantity > 0
+                  AND pb.expiry_date >= date('now')
+                ORDER BY pb.batch_date ASC, pb.created_at ASC
+            `, [productId], (err, availableBatches) => {
+                if (err) {
+                    return reject(new Error(`Помилка отримання партій: ${err.message}`));
+                }
+                
+                const totalAvailable = availableBatches.reduce((sum, batch) => sum + batch.available_quantity, 0);
+                
+                if (totalAvailable === 0) {
+                    return resolve({
+                        quantity_reserved: 0,
+                        shortage: quantityNeeded,
+                        allocated_batches: [],
+                        product_name: availableBatches[0]?.product_name || 'Невідомий товар'
+                    });
+                }
+                
+                // Розподіляємо кількість по партіях (FIFO)
+                const allocatedBatches = [];
+                let remainingQuantity = quantityNeeded;
+                let quantityReserved = 0;
+                
+                for (const batch of availableBatches) {
+                    if (remainingQuantity <= 0) break;
+                    
+                    const allocateFromBatch = Math.min(remainingQuantity, batch.available_quantity);
+                    
+                    allocatedBatches.push({
+                        batch_id: batch.id,
+                        batch_date: batch.batch_date,
+                        quantity: allocateFromBatch,
+                        expiry_date: batch.expiry_date
+                    });
+                    
+                    remainingQuantity -= allocateFromBatch;
+                    quantityReserved += allocateFromBatch;
+                }
+                
+                // Резервуємо партії в базі даних
+                if (allocatedBatches.length > 0) {
+                    db.serialize(() => {
+                        db.run('BEGIN TRANSACTION');
+                        
+                        let processedBatches = 0;
+                        let hasError = false;
+                        
+                        allocatedBatches.forEach(allocation => {
+                            if (hasError) return;
+                            
+                            db.run(`
+                                UPDATE production_batches 
+                                SET reserved_quantity = reserved_quantity + ?,
+                                    available_quantity = available_quantity - ?,
+                                    updated_at = CURRENT_TIMESTAMP
+                                WHERE id = ? AND available_quantity >= ?
+                            `, [allocation.quantity, allocation.quantity, allocation.batch_id, allocation.quantity], function(err) {
+                                if (err || this.changes === 0) {
+                                    hasError = true;
+                                    db.run('ROLLBACK');
+                                    return reject(new Error(`Не вдалося зарезервувати партію ${allocation.batch_id}`));
+                                }
+                                
+                                processedBatches++;
+                                if (processedBatches === allocatedBatches.length) {
+                                    db.run('COMMIT');
+                                    
+                                    console.log(`✅ Зарезервовано ${quantityReserved} шт товару ${productId}`);
+                                    
+                                    resolve({
+                                        quantity_reserved: quantityReserved,
+                                        shortage: Math.max(0, remainingQuantity),
+                                        allocated_batches: allocatedBatches,
+                                        product_name: availableBatches[0]?.product_name
+                                    });
+                                }
+                            });
+                        });
+                    });
+                } else {
+                    resolve({
+                        quantity_reserved: 0,
+                        shortage: quantityNeeded,
+                        allocated_batches: [],
+                        product_name: availableBatches[0]?.product_name
+                    });
+                }
+            });
+        });
+    }
+    
+    // Існуючі методи залишаються без змін
     static async getBatchesByProduct(req, res) {
         try {
             const { productId } = req.params;
@@ -61,7 +358,6 @@ class BatchController {
         }
     }
     
-    // Отримати всі партії з групуванням по товарах
     static async getAllBatchesGrouped(req, res) {
         try {
             const sql = `
@@ -149,7 +445,6 @@ class BatchController {
         }
     }
     
-    // Отримати партії що закінчуються терміном
     static async getExpiringBatches(req, res) {
         try {
             const { days = 7 } = req.query;
@@ -192,7 +487,6 @@ class BatchController {
         }
     }
     
-    // Резервування партій під замовлення
     static async reserveBatches(req, res) {
         try {
             const { orderId } = req.params;
@@ -241,9 +535,8 @@ class BatchController {
                             if (completed === allocations.length && !hasError) {
                                 db.run('COMMIT');
                                 res.json({ 
-                                    message: 'Партію успішно списано',
-                                    batch_date: batch.batch_date,
-                                    quantity_writeoff: quantity
+                                    message: 'Партії успішно зарезервовано',
+                                    reservations: allocations.length
                                 });
                             }
                         });
@@ -256,7 +549,6 @@ class BatchController {
         }
     }
     
-    // Списання партії
     static writeoffBatch(req, res) {
         try {
             const { batchId } = req.params;
@@ -349,7 +641,7 @@ class BatchController {
             res.status(500).json({ error: 'Помилка сервера' });
         }
     }
-    // Отримати загальну доступність товару (швидкий ендпоінт для форм)
+    
     static async getProductAvailability(req, res) {
         try {
             const productId = parseInt(req.params.productId);
@@ -414,6 +706,5 @@ class BatchController {
         }
     }
 }
-
 
 module.exports = BatchController;

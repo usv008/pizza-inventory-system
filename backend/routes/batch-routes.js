@@ -23,4 +23,8 @@ router.post('/batches/:batchId/writeoff', BatchController.writeoffBatch);
 // Отримати доступність товару
 router.get('/products/:productId/availability', BatchController.getProductAvailability);
 
+// НОВІ роути для редагування замовлень з партіями
+router.post('/orders/:orderId/unreserve-batches', BatchController.unreserveBatchesForOrder);
+router.post('/orders/:orderId/reserve-batches-items', BatchController.reserveBatchesForOrderItems);
+
 module.exports = router;
