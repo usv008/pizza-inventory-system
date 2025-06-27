@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pizza Inventory System</title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    
+    <style>
+        .welcome-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3rem 2rem;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .welcome-card h1 {
+            font-size: 2.5em;
+            margin-bottom: 1rem;
+        }
+        
+        .welcome-card p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .pizzas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            padding: 30px;
+        }
+        
+        .pizza-card {
+            background: white;
+            border: 2px solid #ecf0f1;
+            border-radius: 10px;
+            padding: 25px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .pizza-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-color: #3498db;
+        }
+        
+        .pizza-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+        
+        .pizza-stock {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .pizza-details {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+        
+        .last-update {
+            text-align: center;
+            color: #7f8c8d;
+            padding: 20px;
+            font-style: italic;
+            background: white;
+            border-radius: 0 0 15px 15px;
+        }
+        
+        .pizzas-section {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        /* Додаткові стилі для партій */
+        .pizza-card.has-expiring {
+            border-color: #f39c12;
+            box-shadow: 0 2px 8px rgba(243, 156, 18, 0.3);
+        }
+        
+        .pizza-card.has-expired {
+            border-color: #e74c3c;
+            box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+        }
+        
+        @media (max-width: 768px) {
+            .welcome-card h1 {
+                font-size: 2em;
+            }
+            
+            .welcome-card p {
+                font-size: 1em;
+            }
+            
+            .pizzas-grid {
+                grid-template-columns: 1fr;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="welcome-card">
+            <h1>🍕 Система обліку замороженої піци</h1>
+            <p>Управління запасами, виробництвом та замовленнями з партійним обліком</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="total-pizzas">0</div>
+                <div class="stat-label">Видів піци</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-stock">0</div>
+                <div class="stat-label">Загальний запас (шт)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-boxes">0</div>
+                <div class="stat-label">Загальний запас (ящ)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-batches">0</div>
+                <div class="stat-label">Активних партій</div>
+            </div>
+        </div>
+
+        <div class="pizzas-section">
+            <div class="section-header">
+                <h2>📊 Поточні запаси товарів з партіями</h2>
+                <button class="refresh-btn" onclick="refreshPage()">🔄 Оновити дані</button>
+            </div>
+            
+            <div id="content">
+                <div class="loading">Завантаження даних...</div>
+            </div>
+
+            <div class="last-update">
+                Останнє оновлення: <span id="last-update-time">-</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/error-handler.js"></script>
+    <script src="/js/navigation.js"></script>
+    
+    <script>
+        const API_URL = '/api';
+
+        // Завантажуємо дані при готовності DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPizzasWithBatches();
+        });
+
+        async function loadPizzasWithBatches() {
+            try {
+                // Завантажуємо товари з партіями
+                const batchesResponse = await fetch(`${API_URL}/batches/grouped`);
+                
+                if (!batchesResponse.ok) {
+                    throw new Error(`HTTP error! status: ${batchesResponse.status}`);
+                }
+                
+                const productsWithBatches = await batchesResponse.json();
+                displayPizzasWithBatches(productsWithBatches);
+                updateStatsWithBatches(productsWithBatches);
+                updateLastUpdateTime();
+                
+            } catch (error) {
+                logError('Failed to load pizzas with batches data', 'DATA_LOAD_ERROR', error);
+                
+                const content = safeQuerySelector('#content');
+                if (content) {
+                    content.innerHTML = `
+                        <div class="error">
+                            ❌ Не вдалося завантажити дані
+                            <br>Помилка: ${error.message}
+                            <br><button class="refresh-btn" onclick="loadPizzasWithBatches()" style="margin-top: 1rem;">Спробувати знову</button>
+                        </div>
+                    `;
+                }
+                
+                showUserError('Помилка завантаження даних товарів');
+            }
+        }
+
+        function displayPizzasWithBatches(products) {
+            const content = safeQuerySelector('#content');
+            if (!content) {
+                logError('Content element not found', 'DOM_ERROR');
+                return;
+            }
+            
+            if (products.length === 0) {
+                content.innerHTML = '<div class="loading">Немає даних про товари з партіями</div>';
+                return;
+            }
+
+            const pizzasHTML = products.map(product => {
+                const stockClass = getStockClass(product.stock_status);
+                const hasExpiring = product.expiring_quantity > 0;
+                const hasExpired = product.batches.some(b => b.status === 'EXPIRED');
+                
+                let cardClass = 'pizza-card';
+                if (hasExpired) cardClass += ' has-expired';
+                else if (hasExpiring) cardClass += ' has-expiring';
+                
+                // Генеруємо HTML для партій
+                const batchesHTML = generateBatchesHTML(product.batches, product.pieces_per_box, product.product_id);
+                
+                // Попередження про терміни
+                let expiryWarning = '';
+                if (hasExpired) {
+                    const expiredBatches = product.batches.filter(b => b.status === 'EXPIRED').length;
+                    expiryWarning = `<div class="expiry-warning critical">⚠️ ${expiredBatches} партій прострочено!</div>`;
+                } else if (hasExpiring) {
+                    const expiringBatches = product.batches.filter(b => b.status === 'EXPIRING').length;
+                    expiryWarning = `<div class="expiry-warning">⏰ ${expiringBatches} партій закінчується термін!</div>`;
+                }
+                
+                return `
+                    <div class="${cardClass}">
+                        <div class="pizza-name">${product.product_name}</div>
+                        <div class="pizza-stock ${stockClass}">${product.total_available || 0} шт</div>
+                        <div class="pizza-details">
+                            Код: ${product.product_code}<br>
+                            Ящиків: ${product.total_boxes || 0}<br>
+                            Партій: <strong>${product.batches_count || 0}</strong>
+                        </div>
+                        ${expiryWarning}
+                        ${batchesHTML}
+                    </div>
+                `;
+            }).join('');
+
+            content.innerHTML = `<div class="pizzas-grid">${pizzasHTML}</div>`;
+            
+            // Підключаємо обробники для розгортання партій з затримкою
+            setTimeout(() => {
+                setupBatchesToggles();
+            }, 100);
+        }
+
+        function generateBatchesHTML(batches, piecesPerBox, productId) {
+            if (!batches || batches.length === 0) {
+                return `
+                    <div class="batches-container">
+                        <div class="batches-empty">Немає активних партій</div>
+                    </div>
+                `;
+            }
+            
+            // Сортуємо партії по даті (найстаріші спочатку)
+            const sortedBatches = batches.sort((a, b) => new Date(a.batch_date) - new Date(b.batch_date));
+            
+            const batchesListHTML = sortedBatches.map(batch => {
+                const boxes = Math.floor(batch.available_quantity / piecesPerBox);
+                const pieces = batch.available_quantity % piecesPerBox;
+                const batchDate = new Date(batch.batch_date).toLocaleDateString('uk-UA');
+                const expiryDate = new Date(batch.expiry_date).toLocaleDateString('uk-UA');
+                
+                let statusClass = 'active';
+                let statusText = 'Активна';
+                
+                if (batch.status === 'EXPIRED') {
+                    statusClass = 'expired';
+                    statusText = 'Прострочена';
+                } else if (batch.status === 'EXPIRING') {
+                    statusClass = 'expiring';
+                    statusText = `${batch.days_to_expiry} дн. до закінчення`;
+                } else if (batch.available_quantity <= 0) {
+                    statusClass = 'depleted';
+                    statusText = 'Вичерпана';
+                }
+                
+                return `
+                    <div class="batch-item ${statusClass}">
+                        <div class="batch-info">
+                            <div class="batch-date">${batchDate}</div>
+                            <div class="batch-details">
+                                <span>Термін до: ${expiryDate}</span>
+                                <span class="batch-status ${statusClass}">${statusText}</span>
+                            </div>
+                        </div>
+                        <div class="batch-quantity">
+                            <div class="batch-quantity-main">${batch.available_quantity} шт</div>
+                            <div class="batch-quantity-sub">${boxes} ящ + ${pieces} шт</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            const oldestBatch = sortedBatches[0];
+            const oldestDate = new Date(oldestBatch.batch_date).toLocaleDateString('uk-UA');
+            const uniqueId = `batches-${productId}`; // Використовуємо productId для унікальності
+            
+            return `
+                <div class="batches-container">
+                    <div class="batches-header">
+                        <div class="batches-title">📦 Партії</div>
+                        <button class="batches-toggle" data-target="${uniqueId}">
+                            Показати
+                        </button>
+                    </div>
+                    <div class="batches-summary">
+                        <span class="batches-count">${batches.length} партій</span>
+                        <span class="batches-oldest">найстаріша: ${oldestDate}</span>
+                    </div>
+                    <div class="batches-list" id="${uniqueId}">
+                        ${batchesListHTML}
+                    </div>
+                </div>
+            `;
+        }
+
+        function setupBatchesToggles() {
+            const toggles = document.querySelectorAll('.batches-toggle');
+            console.log('Знайдено кнопок переключення:', toggles.length); // Для діагностики
+            
+            toggles.forEach((toggle, index) => {
+                // Видаляємо старі обробники (якщо є)
+                toggle.replaceWith(toggle.cloneNode(true));
+                const newToggle = document.querySelectorAll('.batches-toggle')[index];
+                
+                newToggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    console.log('Кнопка натиснута:', this); // Для діагностики
+                    
+                    const targetId = this.getAttribute('data-target');
+                    const batchesList = document.getElementById(targetId);
+                    
+                    console.log('Target ID:', targetId, 'Element:', batchesList); // Для діагностики
+                    
+                    if (batchesList) {
+                        const isExpanded = batchesList.classList.contains('expanded');
+                        
+                        if (isExpanded) {
+                            batchesList.classList.remove('expanded');
+                            this.textContent = 'Показати';
+                        } else {
+                            batchesList.classList.add('expanded');
+                            this.textContent = 'Приховати';
+                        }
+                    } else {
+                        console.error('Не знайдено елемент з ID:', targetId);
+                    }
+                });
+            });
+        }
+
+        function getStockClass(stockStatus) {
+            return `stock-${stockStatus}`;
+        }
+
+        function updateStatsWithBatches(products) {
+            const totalProducts = products.length;
+            const totalStock = products.reduce((sum, p) => sum + (p.total_available || 0), 0);
+            const totalBoxes = products.reduce((sum, p) => sum + (p.total_boxes || 0), 0);
+            const totalBatches = products.reduce((sum, p) => sum + (p.batches_count || 0), 0);
+
+            const elements = {
+                'total-pizzas': totalProducts,
+                'total-stock': totalStock, 
+                'total-boxes': totalBoxes,
+                'total-batches': totalBatches
+            };
+
+            Object.entries(elements).forEach(([id, value]) => {
+                const element = safeQuerySelector(`#${id}`);
+                if (element) {
+                    element.textContent = value;
+                } else {
+                    logError(`Stats element not found: ${id}`, 'DOM_ERROR');
+                }
+            });
+        }
+
+        function updateLastUpdateTime() {
+            const timeElement = safeQuerySelector('#last-update-time');
+            if (timeElement) {
+                const now = new Date();
+                const timeString = now.toLocaleString('uk-UA');
+                timeElement.textContent = timeString;
+            }
+        }
+
+        // Автоматичне оновлення кожні 30 секунд
+        setInterval(() => {
+            try {
+                loadPizzasWithBatches();
+            } catch (error) {
+                logError('Auto refresh failed', 'AUTO_REFRESH_ERROR', error);
+            }
+        }, 30000);
+        
+        // Функція оновлення для цієї сторінки
+        window.refreshPageContent = function() {
+            loadPizzasWithBatches();
+        };
+
+        // Додаємо автооновлення при фокусі сторінки
+        window.addEventListener('focus', function() {
+            if (typeof window.refreshPageContent === 'function') {
+                window.refreshPageContent();
+            }
+        });
+    </script>
+</body>
+</html>

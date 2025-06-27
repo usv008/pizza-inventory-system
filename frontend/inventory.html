@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управління Запасами - Pizza Inventory</title>
+    <link rel="stylesheet" href="/styles/main.css">
+    <link rel="stylesheet" href="/styles/forms.css">
+    <link rel="stylesheet" href="/styles/tables.css">
+    <link rel="stylesheet" href="/styles/buttons.css">
+    <link rel="stylesheet" href="/styles/modals-tabs.css">
+    <link rel="stylesheet" href="/styles/navigation.css">
+    <link rel="stylesheet" href="/styles/batches.css">
+    <link rel="stylesheet" href="styles/arrivals.css">
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+</head>
+<body>
+    <div class="container">
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="total-products">0</div>
+                <div class="stat-label">Товарів</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-pieces">0</div>
+                <div class="stat-label">Штук загалом</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-boxes">0</div>
+                <div class="stat-label">Ящиків загалом</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-batches">0</div>
+                <div class="stat-label">Активних партій</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="openTab(event, 'production')">🏭 Виробництво</button>
+            <button class="tab" onclick="openTab(event, 'writeoff')">❌ Списання</button>
+            <button class="tab" onclick="openTab(event, 'arrivals')">📥 Прихід</button>
+            <button class="tab" onclick="openTab(event, 'movements')">📋 Історія рухів</button>
+            <button class="tab" onclick="openTab(event, 'batches')">📦 Партії</button>
+            
+        </div>
+
+        <div id="production" class="tab-content active">
+            <div class="section-title">Додати запис виробництва</div>
+            
+            <div class="form-hint">
+                💡 При виробництві автоматично створюється або поповнюється партія товару з датою виробництва.
+                Партії відстежуються для правильного FIFO відвантаження.
+            </div>
+            
+            <form id="production-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="prod-product">Товар *</label>
+                        <select id="prod-product" name="product_id" required>
+                            <option value="">Оберіть товар...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="prod-date">Дата виробництва *</label>
+                        <input type="date" id="prod-date" name="production_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="prod-total">Загальна кількість (шт) *</label>
+                        <input type="number" id="prod-total" name="total_quantity" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="prod-boxes">Кількість ящиків</label>
+                        <input type="number" id="prod-boxes" name="boxes_quantity" min="0" value="0" readonly style="background: #f8f9fa;">
+                    </div>
+                    <div class="form-group">
+                        <label for="prod-pieces">Штук без ящиків</label>
+                        <input type="number" id="prod-pieces" name="pieces_quantity" min="0" value="0" readonly style="background: #f8f9fa;">
+                    </div>
+                    <div class="form-group">
+                        <label for="prod-responsible">Відповідальний</label>
+                        <input type="text" id="prod-responsible" name="responsible" placeholder="Ім'я відповідального">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="prod-notes">Примітки</label>
+                    <textarea id="prod-notes" name="notes" rows="3" placeholder="Додаткова інформація..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Термін зберігання: <span id="expiry-date">буде розрахований автоматично (+365 днів)</span></label>
+                </div>
+                
+                <!-- Попередження про існуючу партію -->
+                <div id="batch-warning" class="expiry-warning" style="display: none;">
+                    ℹ️ <span id="batch-warning-text"></span>
+                </div>
+                
+                <button type="submit" class="btn btn-success">➕ Додати виробництво</button>
+                <button type="button" class="btn" onclick="clearProductionForm()">🔄 Очистити</button>
+            </form>
+
+            <div class="section-title" style="margin-top: 3rem;">Історія виробництва</div>
+            
+            <div id="production-loading" class="loading">Завантаження...</div>
+            <div id="production-content" style="display: none;">
+                <table class="table" id="production-table">
+                    <thead>
+                        <tr>
+                            <th>Дата/час</th>
+                            <th>Товар</th>
+                            <th>Загальна к-ть</th>
+                            <th>Ящиків</th>
+                            <th>Штук</th>
+                            <th>Партія</th>
+                            <th>Залишки партії</th>
+                            <th>Термін зберігання</th>
+                            <th>Відповідальний</th>
+                        </tr>
+                    </thead>
+                    <tbody id="production-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="writeoff" class="tab-content">
+            <div class="section-title">Списати товар</div>
+            
+            <div class="form-hint">
+                💡 Оберіть товар і партію для списання. Рекомендується списувати з найстаріших партій (FIFO).
+            </div>
+            
+            <form id="writeoff-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="wo-product">Товар *</label>
+                        <select id="wo-product" name="product_id" required>
+                            <option value="">Оберіть товар...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="wo-batch">Партія для списання</label>
+                        <select id="wo-batch" name="batch_id" style="display: none;">
+                            <option value="">Оберіть партію...</option>
+                        </select>
+                        <div id="wo-batch-info" class="batches-loading" style="display: none;">
+                            Завантаження партій...
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="wo-date">Дата списання *</label>
+                        <input type="date" id="wo-date" name="writeoff_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="wo-total">Кількість для списання (шт) *</label>
+                        <input type="number" id="wo-total" name="total_quantity" min="1" required>
+                        <small id="wo-available" style="color: #7f8c8d; display: block; margin-top: 0.25rem;"></small>
+                    </div>
+                    <div class="form-group">
+                        <label for="wo-reason">Причина списання *</label>
+                        <select id="wo-reason" name="reason" required>
+                            <option value="">Оберіть причину...</option>
+                            <option value="Закінчення терміну придатності">Закінчення терміну придатності</option>
+                            <option value="Пошкодження упаковки">Пошкодження упаковки</option>
+                            <option value="Брак виробництва">Брак виробництва</option>
+                            <option value="Втрата товарного вигляду">Втрата товарного вигляду</option>
+                            <option value="Представницькі витрати">Представницькі витрати</option>
+                            <option value="Дегустація">Дегустація</option>
+                            <option value="Інше">Інше</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="wo-responsible">Відповідальний *</label>
+                        <input type="text" id="wo-responsible" name="responsible" required placeholder="Ім'я відповідального">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="wo-notes">Примітки</label>
+                    <textarea id="wo-notes" name="notes" rows="3" placeholder="Додаткова інформація про списання..."></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-danger">❌ Списати товар</button>
+                <button type="button" class="btn" onclick="clearWriteoffForm()">🔄 Очистити</button>
+            </form>
+
+            <div class="section-title" style="margin-top: 3rem;">Історія списання</div>
+            
+            <div id="writeoff-loading" class="loading">Завантаження...</div>
+            <div id="writeoff-content" style="display: none;">
+                <table class="table" id="writeoff-table">
+                    <thead>
+                        <tr>
+                            <th>Дата</th>
+                            <th>Товар</th>
+                            <th>Партія</th>
+                            <th>Кількість</th>
+                            <th>Причина</th>
+                            <th>Відповідальний</th>
+                            <th>Примітки</th>
+                        </tr>
+                    </thead>
+                    <tbody id="writeoff-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="movements" class="tab-content">
+            <div class="section-title">Історія рухів товарів</div>
+            
+            <div class="form-grid" style="margin-bottom: 2rem;">
+                <div class="form-group">
+                    <label for="filter-product">Фільтр по товару</label>
+                    <select id="filter-product">
+                        <option value="">Всі товари</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filter-type">Тип руху</label>
+                    <select id="filter-type">
+                        <option value="">Всі типи</option>
+                        <option value="PRODUCTION">Виробництво</option>
+                        <option value="WRITEOFF">Списання</option>
+                        <option value="ADJUSTMENT">Корегування</option>
+                        <option value="IN">Прихід</option>
+                        <option value="OUT">Витрата</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filter-batch">Фільтр по партії</label>
+                    <input type="date" id="filter-batch" placeholder="Дата партії">
+                </div>
+                <div class="form-group">
+                    <label for="filter-date-from">Дата від</label>
+                    <input type="date" id="filter-date-from">
+                </div>
+                <div class="form-group">
+                    <label for="filter-date-to">Дата до</label>
+                    <input type="date" id="filter-date-to">
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 1rem;">
+                <button class="btn" onclick="applyMovementsFilter()">🔍 Застосувати фільтр</button>
+                <button class="btn" onclick="clearMovementsFilter()">🗑️ Очистити фільтр</button>
+                <button class="btn" onclick="exportMovements()">📊 Експорт CSV</button>
+            </div>
+            
+            <div id="movements-loading" class="loading">Завантаження...</div>
+            <div id="movements-content" style="display: none;">
+                <div id="movements-summary" style="background: #f8f9fa; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;">
+                    <strong>Підсумок:</strong>
+                    <span id="movements-count">0</span> записів, 
+                    Загальний прихід: <span id="total-in" style="color: #27ae60;">+0 шт</span>, 
+                    Загальна витрата: <span id="total-out" style="color: #e74c3c;">-0 шт</span>
+                </div>
+                
+                <table class="table" id="movements-table">
+                    <thead>
+                        <tr>
+                            <th>Дата</th>
+                            <th>Товар</th>
+                            <th>Партія</th>
+                            <th>Тип руху</th>
+                            <th>Кількість</th>
+                            <th>Причина/Опис</th>
+                            <th>Користувач</th>
+                        </tr>
+                    </thead>
+                    <tbody id="movements-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="batches" class="tab-content">
+            <div class="section-title">Управління партіями</div>
+            
+            <div class="form-grid" style="margin-bottom: 2rem;">
+                <div class="form-group">
+                    <label for="batch-filter-product">Товар</label>
+                    <select id="batch-filter-product">
+                        <option value="">Всі товари</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="batch-filter-status">Статус</label>
+                    <select id="batch-filter-status">
+                        <option value="">Всі статуси</option>
+                        <option value="ACTIVE">Активні</option>
+                        <option value="EXPIRING">Закінчуються</option>
+                        <option value="EXPIRED">Прострочені</option>
+                        <option value="DEPLETED">Вичерпані</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="batch-filter-days">Днів до закінчення</label>
+                    <select id="batch-filter-days">
+                        <option value="">Всі</option>
+                        <option value="1">1 день</option>
+                        <option value="3">3 дні</option>
+                        <option value="7">7 днів</option>
+                        <option value="30">30 днів</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 1rem;">
+                <button class="btn" onclick="loadBatchesWithFilter()">🔍 Застосувати фільтр</button>
+                <button class="btn" onclick="clearBatchesFilter()">🗑️ Очистити</button>
+                <button class="btn btn-warning" onclick="loadExpiringBatches()">⚠️ Що закінчуються</button>
+            </div>
+            
+            <div id="batches-loading" class="loading">Завантаження партій...</div>
+            <div id="batches-content" style="display: none;">
+                <div id="batches-summary" style="background: #f8f9fa; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;">
+                    <strong>Підсумок партій:</strong>
+                    <span id="batches-total-count">0</span> партій, 
+                    <span id="batches-total-quantity">0 шт</span> загалом
+                </div>
+                
+                <div id="batches-grid" class="pizzas-grid">
+                    <!-- Тут будуть картки з партіями -->
+                </div>
+            </div>
+        </div>
+
+        <div id="arrivals" class="tab-content">
+            <div class="arrival-form-header">
+                <h2 class="arrival-form-title">
+                    📦 Документ Оприходування
+                </h2>
+                <p class="arrival-form-subtitle">Додайте товари що надійшли на склад</p>
+            </div>
+        
+            <form id="arrival-form">
+                <div class="arrival-main-fields">
+                    <div class="arrival-field-group">
+                        <label for="arrival-date">Дата приходу *</label>
+                        <input type="date" id="arrival-date" name="arrival_date" required>
+                    </div>
+                    <div class="arrival-field-group">
+                        <label for="arrival-reason">Причина приходу *</label>
+                        <input type="text" id="arrival-reason" name="reason" required 
+                               placeholder="Наприклад: повернення клієнта, надлишки виробництва...">
+                    </div>
+                </div>
+        
+                <div class="arrival-items-section">
+                    <div class="arrival-items-header">
+                        <h3 class="arrival-items-title">
+                            🛒 Позиції документу
+                        </h3>
+                        <button type="button" id="add-arrival-item" class="add-item-btn">
+                            ➕ Додати позицію
+                        </button>
+                    </div>
+        
+                    <div class="arrival-items-container">
+                        <table id="arrival-items-table">
+                            <thead>
+                                <tr>
+                                    <th>Товар *</th>
+                                    <th>Кількість *</th>
+                                    <th>Дата виробництва *</th>
+                                    <th>Примітка</th>
+                                    <th style="width: 60px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="arrival-items-empty">
+                                    <td colspan="5">
+                                        Додайте позиції до документу<br>
+                                        <small style="color: #adb5bd;">Натисніть "Додати позицію" щоб почати</small>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+        
+                <div class="arrival-form-actions">
+                    <button type="submit" class="arrival-submit-btn">
+                        💾 Зберегти документ
+                    </button>
+                </div>
+            </form>
+        
+            <div id="arrival-success" style="display:none;"></div>
+            <div id="arrival-error" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script src="/js/error-handler.js"></script>
+    <script src="/js/navigation.js"></script>
+    <script src="js/arrival.js"></script>
+    <script>
+        // Базові змінні та функції з попередньої версії
+        if (!window.safeQuerySelectorAll) {
+            window.safeQuerySelectorAll = window.errorHandler.safeQuerySelectorAll.bind(window.errorHandler);
+        }
+        if (!window.logError) {
+            window.logError = window.errorHandler.logError.bind(window.errorHandler);
+        }
+        if (!window.showUserError) {
+            window.showUserError = window.errorHandler.showUserError.bind(window.errorHandler);
+        }
+        if (!window.safeQuerySelector) {
+            window.safeQuerySelector = window.errorHandler.safeQuerySelector.bind(window.errorHandler);
+        }
+        
+        const API_URL = '/api';
+        let products = [];
+        let productBatches = {}; // Кеш партій по товарах
+
+        // Завантаження даних при відкритті сторінки
+        document.addEventListener('DOMContentLoaded', function() {
+            initializePage();
+        });
+
+        async function initializePage() {
+            try {
+                await loadProducts();
+                setupDateFields();
+                setupEventListeners();
+                
+                await Promise.all([
+                    loadStats(),
+                    loadProduction(),
+                    loadWriteoffs(),
+                    loadMovements()
+                ]);
+            } catch (error) {
+                logError('Failed to initialize inventory page', 'PAGE_INIT_ERROR', error);
+                showUserError('Помилка ініціалізації сторінки');
+            }
+        }
+
+        function setupDateFields() {
+            const today = new Date().toISOString().split('T')[0];
+            
+            const prodDate = safeQuerySelector('#prod-date');
+            if (prodDate) prodDate.value = today;
+            
+            const woDate = safeQuerySelector('#wo-date');
+            if (woDate) woDate.value = today;
+        }
+
+        function setupEventListeners() {
+            const prodDate = safeQuerySelector('#prod-date');
+            if (prodDate) {
+                prodDate.addEventListener('change', function() {
+                    updateExpiryDate();
+                    checkExistingBatch();
+                });
+                updateExpiryDate();
+            }
+            
+            setupProductEventListeners();
+            setupFormHandlers();
+            initializeTabs();
+        }
+
+        function setupProductEventListeners() {
+            const prodProduct = safeQuerySelector('#prod-product');
+            const prodTotal = safeQuerySelector('#prod-total');
+            
+            if (prodProduct && prodTotal) {
+                prodProduct.addEventListener('change', function() {
+                    calculateQuantities();
+                    checkExistingBatch();
+                });
+                prodTotal.addEventListener('input', calculateQuantities);
+            }
+            
+            const woProduct = safeQuerySelector('#wo-product');
+            if (woProduct) {
+                woProduct.addEventListener('change', function() {
+                    loadProductBatches(this.value);
+                });
+            }
+        }
+
+        // Перевірка існуючої партії при виробництві
+        async function checkExistingBatch() {
+            const productId = safeQuerySelector('#prod-product')?.value;
+            const productionDate = safeQuerySelector('#prod-date')?.value;
+            const warningDiv = safeQuerySelector('#batch-warning');
+            const warningText = safeQuerySelector('#batch-warning-text');
+            
+            if (!productId || !productionDate || !warningDiv || !warningText) {
+                if (warningDiv) warningDiv.style.display = 'none';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/products/${productId}/batches`);
+                if (response.ok) {
+                    const batches = await response.json();
+                    const existingBatch = batches.find(b => b.batch_date === productionDate);
+                    
+                    if (existingBatch) {
+                        warningText.textContent = `Партія на цю дату вже існує (${existingBatch.available_quantity} шт). Нове виробництво буде додано до існуючої партії.`;
+                        warningDiv.style.display = 'block';
+                        warningDiv.className = 'expiry-warning'; // Звичайне попередження
+                    } else {
+                        warningText.textContent = 'Буде створена нова партія на цю дату.';
+                        warningDiv.style.display = 'block';
+                        warningDiv.className = 'expiry-warning'; // Звичайне попередження
+                    }
+                }
+            } catch (error) {
+                logError('Failed to check existing batch', 'BATCH_CHECK_ERROR', error);
+                if (warningDiv) warningDiv.style.display = 'none';
+            }
+        }
+
+        // Завантаження партій для товару (для списання)
+        async function loadProductBatches(productId) {
+            const batchSelect = safeQuerySelector('#wo-batch');
+            const batchInfo = safeQuerySelector('#wo-batch-info');
+            const availableDiv = safeQuerySelector('#wo-available');
+            
+            if (!productId) {
+                if (batchSelect) {
+                    batchSelect.style.display = 'none';
+                    batchSelect.innerHTML = '<option value="">Оберіть партію...</option>';
+                }
+                if (batchInfo) batchInfo.style.display = 'none';
+                if (availableDiv) availableDiv.textContent = '';
+                return;
+            }
+            
+            try {
+                if (batchInfo) {
+                    batchInfo.style.display = 'block';
+                    batchInfo.textContent = 'Завантаження партій...';
+                }
+                
+                const response = await fetch(`${API_URL}/products/${productId}/batches`);
+                if (!response.ok) throw new Error('Помилка завантаження партій');
+                
+                const batches = await response.json();
+                const activeBatches = batches.filter(b => b.available_quantity > 0);
+                
+                if (batchSelect) {
+                    batchSelect.innerHTML = '<option value="">Оберіть партію...</option>';
+                    
+                    activeBatches.forEach(batch => {
+                        const option = document.createElement('option');
+                        option.value = batch.id;
+                        option.textContent = `${batch.batch_date} - ${batch.available_quantity} шт`;
+                        option.setAttribute('data-available', batch.available_quantity);
+                        
+                        // Додаємо індикатор статусу
+                        if (batch.is_expiring) {
+                            option.textContent += ' ⚠️';
+                            option.style.color = '#f39c12';
+                        } else if (batch.is_expired) {
+                            option.textContent += ' ❌';
+                            option.style.color = '#e74c3c';
+                        }
+                        
+                        batchSelect.appendChild(option);
+                    });
+                    
+                    batchSelect.style.display = 'block';
+                    
+                    // Додаємо обробник для вибору партії
+                    batchSelect.addEventListener('change', function() {
+                        const selectedOption = this.selectedOptions[0];
+                        if (selectedOption && availableDiv) {
+                            const available = selectedOption.getAttribute('data-available');
+                            availableDiv.textContent = `Доступно в партії: ${available} шт`;
+                            availableDiv.style.color = '#27ae60';
+                        } else if (availableDiv) {
+                            availableDiv.textContent = '';
+                        }
+                    });
+                }
+                
+                if (batchInfo) {
+                    if (activeBatches.length === 0) {
+                        batchInfo.textContent = 'Немає активних партій для списання';
+                        batchInfo.style.color = '#e74c3c';
+                    } else {
+                        batchInfo.style.display = 'none';
+                    }
+                }
+                
+                // Кешуємо партії
+                productBatches[productId] = batches;
+                
+            } catch (error) {
+                logError('Failed to load product batches', 'BATCH_LOAD_ERROR', error);
+                if (batchInfo) {
+                    batchInfo.textContent = 'Помилка завантаження партій';
+                    batchInfo.style.color = '#e74c3c';
+                }
+            }
+        }
+
+        function setupFormHandlers() {
+            // Обробник форми виробництва
+            const productionForm = safeQuerySelector('#production-form');
+            if (productionForm) {
+                productionForm.addEventListener('submit', handleProductionSubmit);
+            }
+            
+            // Обробник форми списання
+            const writeoffForm = safeQuerySelector('#writeoff-form');
+            if (writeoffForm) {
+                writeoffForm.addEventListener('submit', handleWriteoffSubmit);
+            }
+        }
+
+        async function handleProductionSubmit(e) {
+            e.preventDefault();
+            
+            try {
+                const formData = new FormData(e.target);
+                const productionData = Object.fromEntries(formData.entries());
+                
+                // Валідація
+                if (!productionData.product_id) {
+                    showUserError('Оберіть товар для виробництва');
+                    return;
+                }
+                
+                if (!productionData.production_date) {
+                    showUserError('Вкажіть дату виробництва');
+                    return;
+                }
+                
+                const totalQuantity = parseInt(productionData.total_quantity);
+                if (isNaN(totalQuantity) || totalQuantity <= 0) {
+                    showUserError('Кількість має бути додатним числом');
+                    return;
+                }
+                
+                productionData.total_quantity = totalQuantity;
+                productionData.product_id = parseInt(productionData.product_id);
+
+                const response = await fetch(`${API_URL}/production`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(productionData)
+                });
+
+                if (!response.ok) {
+                    let errorMessage = 'Помилка створення виробництва';
+                    
+                    try {
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('application/json')) {
+                            const error = await response.json();
+                            errorMessage = error.error || error.message || errorMessage;
+                        } else {
+                            errorMessage = `Помилка сервера (${response.status})`;
+                        }
+                    } catch (parseError) {
+                        errorMessage = `Помилка сервера (${response.status})`;
+                    }
+                    
+                    throw new Error(errorMessage);
+                }
+
+                const result = await response.json();
+                showUserError(`Виробництво додано! Партія: ${result.batch_date || productionData.production_date}`, 'success');
+                clearProductionForm();
+                await Promise.all([loadProduction(), loadStats()]);
+                
+            } catch (error) {
+                logError('Failed to create production', 'PRODUCTION_CREATE_ERROR', error);
+                showUserError('Помилка додавання виробництва: ' + error.message);
+            }
+        }
+
+        async function handleWriteoffSubmit(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const writeoffData = Object.fromEntries(formData.entries());
+            
+            // Валідація
+            if (!writeoffData.product_id || !writeoffData.total_quantity || 
+                !writeoffData.reason || !writeoffData.responsible) {
+                showUserError('Заповніть всі обов\'язкові поля');
+                return;
+            }
+            
+            // Якщо обрана партія, використовуємо API списання партії
+            if (writeoffData.batch_id) {
+                try {
+                    const response = await fetch(`${API_URL}/batches/${writeoffData.batch_id}/writeoff`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            quantity: parseInt(writeoffData.total_quantity),
+                            reason: writeoffData.reason,
+                            responsible: writeoffData.responsible,
+                            notes: writeoffData.notes
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Помилка списання партії');
+                    }
+
+                    showUserError('Партію успішно списано!', 'success');
+                    clearWriteoffForm();
+                    await Promise.all([loadWriteoffs(), loadStats(), loadProducts()]);
+                } catch (error) {
+                    logError('Failed to writeoff batch', 'BATCH_WRITEOFF_ERROR', error);
+                    showUserError('Помилка списання партії: ' + error.message);
+                }
+            } else {
+                // Стандартне списання без партії
+                try {
+                    const response = await fetch(`${API_URL}/writeoffs`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(writeoffData)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Помилка списання товару');
+                    }
+
+                    showUserError('Товар успішно списано!', 'success');
+                    clearWriteoffForm();
+                    await Promise.all([loadWriteoffs(), loadStats(), loadProducts()]);
+                } catch (error) {
+                    logError('Failed to create writeoff', 'WRITEOFF_CREATE_ERROR', error);
+                    showUserError('Помилка списання товару: ' + error.message);
+                }
+            }
+        }
+
+        // Управління вкладками
+        function openTab(event, tabName) {
+            console.log('Opening tab:', tabName); // Для діагностики
+            // Приховуємо всі вкладки
+            const allTabContents = document.querySelectorAll('.tab-content');
+            allTabContents.forEach(tc => {
+                tc.classList.remove('active');
+                tc.style.display = 'none';
+            });
+            // Видаляємо активний клас з усіх кнопок вкладок
+            const allTabs = document.querySelectorAll('.tab');
+            allTabs.forEach(t => t.classList.remove('active'));
+            // Показуємо активну вкладку
+            const activeContent = document.getElementById(tabName);
+            if (activeContent) {
+                activeContent.classList.add('active');
+                activeContent.style.display = 'block';
+                console.log('Tab content found and shown:', tabName);
+            } else {
+                console.error('Tab content not found:', tabName);
+            }
+            // Додаємо активний клас до поточної кнопки
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            }
+            // Викликаємо обробник вкладки якщо існує
+            if (window._tabHandlers && window._tabHandlers[tabName]) {
+                try {
+                    window._tabHandlers[tabName]();
+                } catch (error) {
+                    console.error('Tab handler error:', error);
+                }
+            }
+        }
+
+        function initializeTabs() {
+            // Показуємо першу вкладку (Виробництво) за замовчуванням
+            const defaultTab = 'production';
+            const defaultTabContent = document.getElementById(defaultTab);
+            const defaultTabButton = document.querySelector('.tab[onclick*="production"]');
+            if (defaultTabContent && defaultTabButton) {
+                document.querySelectorAll('.tab-content').forEach(tc => {
+                    tc.classList.remove('active');
+                    tc.style.display = 'none';
+                });
+                defaultTabContent.classList.add('active');
+                defaultTabContent.style.display = 'block';
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                defaultTabButton.classList.add('active');
+                console.log('Default tab initialized:', defaultTab);
+            }
+        }
+
+        // Завантаження товарів
+        async function loadProducts() {
+            try {
+                const response = await fetch(`${API_URL}/products`);
+                if (!response.ok) throw new Error('Помилка завантаження товарів');
+                
+                products = await response.json();
+                updateProductSelects();
+                
+            } catch (error) {
+                logError('Failed to load products', 'PRODUCTS_LOAD_ERROR', error);
+                showUserError('Помилка завантаження товарів: ' + error.message);
+            }
+        }
+
+        function updateProductSelects() {
+            const selects = [
+                { id: 'prod-product', defaultText: 'Оберіть товар...' },
+                { id: 'wo-product', defaultText: 'Оберіть товар...', includeStock: true },
+                { id: 'filter-product', defaultText: 'Всі товари' },
+                { id: 'batch-filter-product', defaultText: 'Всі товари' }
+            ];
+            
+            selects.forEach(selectConfig => {
+                const select = safeQuerySelector(`#${selectConfig.id}`);
+                if (!select) return;
+                
+                select.innerHTML = `<option value="">${selectConfig.defaultText}</option>`;
+                
+                products.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product.id;
+                    option.textContent = `${product.name} (${product.code})`;
+                    
+                    if (selectConfig.includeStock) {
+                        option.setAttribute('data-stock', product.stock_pieces);
+                        option.setAttribute('data-pieces-per-box', product.pieces_per_box);
+                    }
+                    
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        // Завантаження статистики з партіями
+        async function loadStats() {
+            try {
+                const [statsResponse, batchesResponse] = await Promise.all([
+                    fetch(`${API_URL}/stats`),
+                    fetch(`${API_URL}/batches/grouped`)
+                ]);
+                
+                if (statsResponse.ok) {
+                    const stats = await statsResponse.json();
+                    
+                    const statsElements = {
+                        'total-products': stats.total_products,
+                        'total-pieces': stats.total_stock_pieces,
+                        'total-boxes': stats.total_stock_boxes
+                    };
+
+                    Object.entries(statsElements).forEach(([id, value]) => {
+                        const element = safeQuerySelector(`#${id}`);
+                        if (element) element.textContent = value;
+                    });
+                }
+                
+                if (batchesResponse.ok) {
+                    const batchesData = await batchesResponse.json();
+                    const totalBatches = batchesData.reduce((sum, p) => sum + (p.batches_count || 0), 0);
+                    
+                    const batchesElement = safeQuerySelector('#total-batches');
+                    if (batchesElement) batchesElement.textContent = totalBatches;
+                }
+                
+            } catch (error) {
+                logError('Failed to load stats', 'STATS_LOAD_ERROR', error);
+            }
+        }
+
+        // Завантаження історії виробництва з партіями
+        async function loadProduction() {
+            const loadingEl = safeQuerySelector('#production-loading');
+            const contentEl = safeQuerySelector('#production-content');
+            
+            try {
+                if (loadingEl) loadingEl.style.display = 'block';
+                if (contentEl) contentEl.style.display = 'none';
+
+                const response = await fetch(`${API_URL}/production`);
+                if (!response.ok) throw new Error('Помилка завантаження виробництва');
+                
+                const production = await response.json();
+                displayProduction(production);
+                
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (contentEl) contentEl.style.display = 'block';
+            } catch (error) {
+                logError('Failed to load production', 'PRODUCTION_LOAD_ERROR', error);
+                showUserError('Помилка завантаження виробництва: ' + error.message);
+            }
+        }
+
+        function displayProduction(production) {
+            const tbody = safeQuerySelector('#production-tbody');
+            if (!tbody) {
+                logError('Production table body not found', 'DOM_ERROR');
+                return;
+            }
+
+            tbody.innerHTML = '';
+
+            if (production.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: #7f8c8d;">Немає записів виробництва</td></tr>';
+                return;
+            }
+
+            production.forEach(item => {
+                const row = document.createElement('tr');
+                const dateStr = new Date(item.production_date).toLocaleDateString('uk-UA');
+                const timeStr = item.production_time || '';
+                const dateTime = timeStr ? `${dateStr}, ${timeStr}` : dateStr;
+                const expiryDate = new Date(item.expiry_date).toLocaleDateString('uk-UA');
+                
+                // Інформація про партію
+                const batchInfo = item.batch_date ? 
+                    `<span class="batch-status active">${item.batch_date}</span>` : 
+                    '<span style="color: #7f8c8d;">-</span>';
+                
+                const batchAvailable = item.batch_available !== undefined ? 
+                    `${item.batch_available} шт` : 
+                    '<span style="color: #7f8c8d;">-</span>';
+                
+                row.innerHTML = `
+                    <td>${dateTime}</td>
+                    <td>${item.product_name} (${item.product_code})</td>
+                    <td>${item.total_quantity} шт</td>
+                    <td>${item.boxes_quantity}</td>
+                    <td>${item.pieces_quantity}</td>
+                    <td>${batchInfo}</td>
+                    <td>${batchAvailable}</td>
+                    <td>${expiryDate}</td>
+                    <td>${item.responsible || 'system'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Автоматичний розрахунок ящиків та штук
+        function calculateQuantities() {
+            const productId = safeQuerySelector('#prod-product')?.value;
+            const totalQuantity = parseInt(safeQuerySelector('#prod-total')?.value) || 0;
+            
+            const boxesEl = safeQuerySelector('#prod-boxes');
+            const piecesEl = safeQuerySelector('#prod-pieces');
+            
+            if (!productId || !totalQuantity || !boxesEl || !piecesEl) {
+                if (boxesEl) boxesEl.value = 0;
+                if (piecesEl) piecesEl.value = 0;
+                removeQuantityHint();
+                return;
+            }
+            
+            const selectedProduct = products.find(p => p.id == productId);
+            if (!selectedProduct) return;
+            
+            const piecesPerBox = selectedProduct.pieces_per_box;
+            const boxes = Math.floor(totalQuantity / piecesPerBox);
+            const remainingPieces = totalQuantity % piecesPerBox;
+            
+            boxesEl.value = boxes;
+            piecesEl.value = remainingPieces;
+            
+            showQuantityHint(totalQuantity, boxes, piecesPerBox, remainingPieces);
+        }
+
+        function showQuantityHint(total, boxes, piecesPerBox, pieces) {
+            let hint = safeQuerySelector('#quantity-hint');
+            if (!hint) {
+                hint = document.createElement('small');
+                hint.id = 'quantity-hint';
+                hint.style.cssText = 'color: #7f8c8d; display: block; margin-top: 0.25rem;';
+                const totalInput = safeQuerySelector('#prod-total');
+                if (totalInput && totalInput.parentNode) {
+                    totalInput.parentNode.appendChild(hint);
+                } else {
+                    return;
+                }
+            }
+            if (hint) {
+                hint.textContent = `${boxes} ящ + ${pieces} шт (по ${piecesPerBox} в ящ.)`;
+            }
+        }
+
+        function removeQuantityHint() {
+            const hint = safeQuerySelector('#quantity-hint');
+            if (hint && hint.parentNode) {
+                hint.parentNode.removeChild(hint);
+            }
+        }
+
+        function updateExpiryDate() {
+            const prodDate = safeQuerySelector('#prod-date')?.value;
+            const expiryEl = safeQuerySelector('#expiry-date');
+            
+            if (prodDate && expiryEl) {
+                const date = new Date(prodDate);
+                date.setDate(date.getDate() + 365);
+                const expiryText = date.toLocaleDateString('uk-UA');
+                expiryEl.textContent = expiryText;
+            }
+        }
+
+        function clearProductionForm() {
+            const form = safeQuerySelector('#production-form');
+            if (form) {
+                form.reset();
+                setupDateFields();
+                updateExpiryDate();
+                removeQuantityHint();
+                
+                const warningDiv = safeQuerySelector('#batch-warning');
+                if (warningDiv) warningDiv.style.display = 'none';
+            }
+        }
+
+        function clearWriteoffForm() {
+            const form = safeQuerySelector('#writeoff-form');
+            if (form) {
+                form.reset();
+                setupDateFields();
+                
+                const batchSelect = safeQuerySelector('#wo-batch');
+                const batchInfo = safeQuerySelector('#wo-batch-info');
+                const availableDiv = safeQuerySelector('#wo-available');
+                
+                if (batchSelect) batchSelect.style.display = 'none';
+                if (batchInfo) batchInfo.style.display = 'none';
+                if (availableDiv) availableDiv.textContent = '';
+            }
+        }
+
+        // Завантаження списання
+        async function loadWriteoffs() {
+            const loadingEl = safeQuerySelector('#writeoff-loading');
+            const contentEl = safeQuerySelector('#writeoff-content');
+            
+            try {
+                if (loadingEl) loadingEl.style.display = 'block';
+                if (contentEl) contentEl.style.display = 'none';
+
+                const response = await fetch(`${API_URL}/writeoffs`);
+                if (!response.ok) throw new Error('Помилка завантаження списання');
+                
+                const writeoffs = await response.json();
+                displayWriteoffs(writeoffs);
+                
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (contentEl) contentEl.style.display = 'block';
+            } catch (error) {
+                logError('Failed to load writeoffs', 'WRITEOFFS_LOAD_ERROR', error);
+                if (loadingEl) loadingEl.innerHTML = 'Помилка завантаження списання';
+            }
+        }
+
+        function displayWriteoffs(writeoffs) {
+            const tbody = safeQuerySelector('#writeoff-tbody');
+            if (!tbody) {
+                logError('Writeoffs table body not found', 'DOM_ERROR');
+                return;
+            }
+
+            tbody.innerHTML = '';
+
+            if (writeoffs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #7f8c8d;">Немає записів списання</td></tr>';
+                return;
+            }
+
+            writeoffs.forEach(item => {
+                const row = document.createElement('tr');
+                const writeoffDate = new Date(item.writeoff_date).toLocaleDateString('uk-UA');
+                
+                // Інформація про партію
+                const batchInfo = item.batch_date ? 
+                    `<span class="batch-status expired">${new Date(item.batch_date).toLocaleDateString('uk-UA')}</span>` : 
+                    '<span style="color: #7f8c8d;">Загальне</span>';
+                
+                row.innerHTML = `
+                    <td>${writeoffDate}</td>
+                    <td>${item.product_name} (${item.product_code})</td>
+                    <td>${batchInfo}</td>
+                    <td style="color: #e74c3c; font-weight: bold;">-${item.total_quantity} шт</td>
+                    <td>${item.reason}</td>
+                    <td>${item.responsible}</td>
+                    <td>${item.notes || '-'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Завантаження рухів з партіями
+        async function loadMovements(filters = {}) {
+            const loadingEl = safeQuerySelector('#movements-loading');
+            const contentEl = safeQuerySelector('#movements-content');
+            
+            try {
+                if (loadingEl) loadingEl.style.display = 'block';
+                if (contentEl) contentEl.style.display = 'none';
+
+                const queryParams = new URLSearchParams();
+                Object.entries(filters).forEach(([key, value]) => {
+                    if (value) queryParams.append(key, value);
+                });
+
+                const response = await fetch(`${API_URL}/movements?${queryParams.toString()}`);
+                if (!response.ok) throw new Error('Помилка завантаження рухів');
+                
+                const movements = await response.json();
+                displayMovements(movements);
+                
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (contentEl) contentEl.style.display = 'block';
+            } catch (error) {
+                logError('Failed to load movements', 'MOVEMENTS_LOAD_ERROR', error);
+                if (loadingEl) loadingEl.innerHTML = 'Помилка завантаження рухів';
+            }
+        }
+
+        function displayMovements(movements) {
+            const tbody = safeQuerySelector('#movements-tbody');
+            if (!tbody) {
+                logError('Movements table body not found', 'DOM_ERROR');
+                return;
+            }
+
+            tbody.innerHTML = '';
+
+            if (movements.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #7f8c8d;">Немає записів рухів</td></tr>';
+                updateMovementsSummary(movements);
+                return;
+            }
+
+            movements.forEach(movement => {
+                const row = document.createElement('tr');
+                const date = new Date(movement.created_at).toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv' });
+                const typeText = getMovementTypeText(movement.movement_type);
+                const typeClass = getMovementTypeClass(movement.movement_type);
+                const quantityText = movement.pieces > 0 ? `+${movement.pieces}` : `${movement.pieces}`;
+                const cleanReason = cleanReasonText(movement.reason);
+                
+                // Інформація про партію
+                const batchInfo = movement.batch_date ? 
+                    `<span class="batch-status active">${movement.batch_date}</span>` : 
+                    '<span style="color: #7f8c8d;">-</span>';
+                
+                row.innerHTML = `
+                    <td>${date}</td>
+                    <td>${movement.product_name} (${movement.product_code})</td>
+                    <td>${batchInfo}</td>
+                    <td><span class="${typeClass}">${typeText}</span></td>
+                    <td style="font-weight: bold; color: ${movement.pieces > 0 ? '#27ae60' : '#e74c3c'}">${quantityText} шт</td>
+                    <td>${cleanReason}</td>
+                    <td>${movement.user || 'system'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            updateMovementsSummary(movements);
+        }
+
+        function updateMovementsSummary(movements) {
+            const totalIn = movements.filter(m => m.pieces > 0).reduce((sum, m) => sum + m.pieces, 0);
+            const totalOut = movements.filter(m => m.pieces < 0).reduce((sum, m) => sum + Math.abs(m.pieces), 0);
+            
+            const countEl = safeQuerySelector('#movements-count');
+            const inEl = safeQuerySelector('#total-in');
+            const outEl = safeQuerySelector('#total-out');
+            
+            if (countEl) countEl.textContent = movements.length;
+            if (inEl) inEl.textContent = `+${totalIn} шт`;
+            if (outEl) outEl.textContent = `-${totalOut} шт`;
+        }
+
+        function applyMovementsFilter() {
+            const filters = {
+                product_id: safeQuerySelector('#filter-product')?.value,
+                movement_type: safeQuerySelector('#filter-type')?.value,
+                batch_date: safeQuerySelector('#filter-batch')?.value,
+                date_from: safeQuerySelector('#filter-date-from')?.value,
+                date_to: safeQuerySelector('#filter-date-to')?.value
+            };
+            
+            Object.keys(filters).forEach(key => {
+                if (!filters[key]) delete filters[key];
+            });
+            
+            loadMovements(filters);
+        }
+
+        function clearMovementsFilter() {
+            const filterElements = [
+                '#filter-product', '#filter-type', '#filter-batch',
+                '#filter-date-from', '#filter-date-to'
+            ];
+            
+            filterElements.forEach(selector => {
+                const element = safeQuerySelector(selector);
+                if (element) element.value = '';
+            });
+            
+            loadMovements();
+        }
+
+        function exportMovements() {
+            const table = safeQuerySelector('#movements-table');
+            if (!table) {
+                showUserError('Таблиця не знайдена для експорту');
+                return;
+            }
+            
+            const rows = Array.from(table.querySelectorAll('tr'));
+            const csvContent = rows.map(row => {
+                const cells = Array.from(row.querySelectorAll('th, td'));
+                return cells.map(cell => `"${cell.textContent.replace(/"/g, '""')}"`).join(',');
+            }).join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `movements_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Управління партіями
+        async function loadBatchesWithFilter() {
+            const loadingEl = safeQuerySelector('#batches-loading');
+            const contentEl = safeQuerySelector('#batches-content');
+            
+            try {
+                if (loadingEl) loadingEl.style.display = 'block';
+                if (contentEl) contentEl.style.display = 'none';
+
+                const response = await fetch(`${API_URL}/batches/grouped`);
+                if (!response.ok) throw new Error('Помилка завантаження партій');
+                
+                const batchesData = await response.json();
+                displayBatches(batchesData);
+                
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (contentEl) contentEl.style.display = 'block';
+            } catch (error) {
+                logError('Failed to load batches', 'BATCHES_LOAD_ERROR', error);
+                if (loadingEl) loadingEl.innerHTML = 'Помилка завантаження партій';
+            }
+        }
+
+        function displayBatches(productsWithBatches) {
+            const grid = safeQuerySelector('#batches-grid');
+            const summary = safeQuerySelector('#batches-summary');
+            
+            if (!grid) return;
+
+            // Оновлюємо підсумок
+            const totalBatches = productsWithBatches.reduce((sum, p) => sum + (p.batches_count || 0), 0);
+            const totalQuantity = productsWithBatches.reduce((sum, p) => sum + (p.total_available || 0), 0);
+            
+            if (summary) {
+                const countEl = safeQuerySelector('#batches-total-count');
+                const quantityEl = safeQuerySelector('#batches-total-quantity');
+                if (countEl) countEl.textContent = totalBatches;
+                if (quantityEl) quantityEl.textContent = totalQuantity;
+            }
+
+            // Генеруємо картки товарів з партіями
+            const batchesHTML = productsWithBatches.map(product => {
+                const stockClass = getStockClass(product.stock_status);
+                const hasExpiring = product.expiring_quantity > 0;
+                
+                let cardClass = 'pizza-card';
+                if (hasExpiring) cardClass += ' has-expiring';
+                
+                const batchesListHTML = product.batches.map(batch => {
+                    const batchDate = new Date(batch.batch_date).toLocaleDateString('uk-UA');
+                    const boxes = Math.floor(batch.available_quantity / product.pieces_per_box);
+                    const pieces = batch.available_quantity % product.pieces_per_box;
+                    
+                    let statusClass = 'active';
+                    let statusText = 'Активна';
+                    
+                    if (batch.status === 'EXPIRED') {
+                        statusClass = 'expired';
+                        statusText = 'Прострочена';
+                    } else if (batch.status === 'EXPIRING') {
+                        statusClass = 'expiring';
+                        statusText = `${batch.days_to_expiry} дн.`;
+                    }
+                    
+                    return `
+                        <div class="batch-item ${statusClass}" style="margin-bottom: 0.5rem;">
+                            <div class="batch-info">
+                                <div class="batch-date">${batchDate}</div>
+                                <div class="batch-details">
+                                    <span class="batch-status ${statusClass}">${statusText}</span>
+                                </div>
+                            </div>
+                            <div class="batch-quantity">
+                                <div class="batch-quantity-main">${batch.available_quantity} шт</div>
+                                <div class="batch-quantity-sub">${boxes} ящ + ${pieces} шт</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                return `
+                    <div class="${cardClass}">
+                        <div class="pizza-name">${product.product_name}</div>
+                        <div class="pizza-stock ${stockClass}">${product.total_available || 0} шт</div>
+                        <div class="pizza-details">
+                            Код: ${product.product_code}<br>
+                            Ящиків: ${product.total_boxes || 0}<br>
+                            Партій: <strong>${product.batches_count || 0}</strong>
+                        </div>
+                        <div class="batches-container">
+                            <div class="batches-title">📦 Партії:</div>
+                            <div style="max-height: 200px; overflow-y: auto; margin-top: 0.5rem;">
+                                ${batchesListHTML || '<div class="batches-empty">Немає партій</div>'}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            grid.innerHTML = batchesHTML;
+        }
+
+        async function loadExpiringBatches() {
+            try {
+                const response = await fetch(`${API_URL}/batches/expiring?days=7`);
+                if (!response.ok) throw new Error('Помилка завантаження партій що закінчуються');
+                
+                const expiringBatches = await response.json();
+                
+                if (expiringBatches.length === 0) {
+                    showUserError('Немає партій що закінчуються найближчим часом', 'success');
+                    return;
+                }
+                
+                // Показуємо попередження
+                const message = `Знайдено ${expiringBatches.length} партій що закінчуються протягом 7 днів!`;
+                showUserError(message, 'warning');
+                
+                // Групуємо по товарах для відображення
+                const groupedBatches = {};
+                expiringBatches.forEach(batch => {
+                    if (!groupedBatches[batch.product_id]) {
+                        groupedBatches[batch.product_id] = {
+                            product_id: batch.product_id,
+                            product_name: batch.product_name,
+                            product_code: batch.product_code,
+                            pieces_per_box: batch.pieces_per_box,
+                            batches: []
+                        };
+                    }
+                    groupedBatches[batch.product_id].batches.push(batch);
+                });
+                
+                const groupedArray = Object.values(groupedBatches);
+                displayBatches(groupedArray);
+                
+            } catch (error) {
+                logError('Failed to load expiring batches', 'EXPIRING_BATCHES_ERROR', error);
+                showUserError('Помилка завантаження партій що закінчуються: ' + error.message);
+            }
+        }
+
+        function clearBatchesFilter() {
+            const filterElements = [
+                '#batch-filter-product', '#batch-filter-status', '#batch-filter-days'
+            ];
+            
+            filterElements.forEach(selector => {
+                const element = safeQuerySelector(selector);
+                if (element) element.value = '';
+            });
+            
+            loadBatchesWithFilter();
+        }
+
+        // Допоміжні функції
+        function cleanReasonText(reason) {
+            if (!reason) return '-';
+            
+            if (reason.startsWith('Виробництво партії')) {
+                return 'Виробництво';
+            }
+            
+            if (reason.startsWith('Списання партії')) {
+                const colonIndex = reason.indexOf(': ');
+                if (colonIndex > -1) {
+                    return reason.substring(colonIndex + 2);
+                }
+                return 'Списання';
+            }
+            
+            return reason;
+        }
+
+        function getMovementTypeText(type) {
+            const typeMap = {
+                'PRODUCTION': 'Виробництво',
+                'WRITEOFF': 'Списання',
+                'ADJUSTMENT': 'Корегування',
+                'IN': 'Прихід',
+                'OUT': 'Витрата'
+            };
+            return typeMap[type] || type;
+        }
+
+        function getMovementTypeClass(type) {
+            const classMap = {
+                'PRODUCTION': 'stock-good',
+                'WRITEOFF': 'stock-danger',
+                'ADJUSTMENT': 'stock-warning',
+                'IN': 'stock-good',
+                'OUT': 'stock-danger'
+            };
+            return classMap[type] || '';
+        }
+
+        function getStockClass(stockStatus) {
+            return `stock-${stockStatus}`;
+        }
+
+        // Глобальні функції для кнопок
+        window.clearProductionForm = clearProductionForm;
+        window.clearWriteoffForm = clearWriteoffForm;
+        window.applyMovementsFilter = applyMovementsFilter;
+        window.clearMovementsFilter = clearMovementsFilter;
+        window.exportMovements = exportMovements;
+        window.loadBatchesWithFilter = loadBatchesWithFilter;
+        window.clearBatchesFilter = clearBatchesFilter;
+        window.loadExpiringBatches = loadExpiringBatches;
+
+        // Функція оновлення для цієї сторінки
+        window.refreshPageContent = async function() {
+            try {
+                const activeTab = safeQuerySelector('.tab.active');
+                if (!activeTab) return;
+                
+                const tabText = activeTab.textContent || '';
+                
+                if (tabText.includes('Виробництво')) {
+                    await Promise.all([loadProduction(), loadStats()]);
+                } else if (tabText.includes('Списання')) {
+                    await Promise.all([loadWriteoffs(), loadStats()]);
+                } else if (tabText.includes('Історія')) {
+                    await loadMovements();
+                } else if (tabText.includes('Партії')) {
+                    await loadBatchesWithFilter();
+                }
+            } catch (error) {
+                logError('Failed to refresh page content', 'REFRESH_ERROR', error);
+                showUserError('Помилка оновлення даних');
+            }
+        };
+
+        // Додаємо автооновлення при фокусі сторінки
+        window.addEventListener('focus', function() {
+            if (typeof window.refreshPageContent === 'function') {
+                window.refreshPageContent();
+            }
+        });
+
+        // Глобальний реєстр обробників вкладок
+        window._tabHandlers = {};
+        window.setTabHandler = function(tab, fn) {
+            window._tabHandlers[tab] = fn;
+        };
+    </script>
+</body>
+</html>

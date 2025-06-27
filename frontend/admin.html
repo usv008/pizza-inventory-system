@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управління Товарами - Pizza Inventory</title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    
+    <style>
+        .product-form-hint {
+            background: #e8f4fd;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .product-form-hint::before {
+            content: '💡 ';
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="total-products">0</div>
+                <div class="stat-label">Всього товарів</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-pieces">0</div>
+                <div class="stat-label">Загальний запас (шт)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-boxes">0</div>
+                <div class="stat-label">Загальний запас (ящ)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="low-stock">0</div>
+                <div class="stat-label">Низький запас</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                ➕ Додати новий товар
+            </div>
+            <div class="card-body">
+                <div class="product-form-hint">
+                    Заповніть основну інформацію про товар. Поля позначені * є обов'язковими.
+                </div>
+                
+                <form id="product-form">
+                    <div class="required-fields-note">Обов'язкові поля</div>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="name" class="required">Назва товару</label>
+                            <input type="text" id="name" name="name" required placeholder="Піца Маргарита">
+                        </div>
+                        <div class="form-group">
+                            <label for="code" class="required">Код товару</label>
+                            <input type="text" id="code" name="code" required placeholder="PM001">
+                        </div>
+                        <div class="form-group">
+                            <label for="weight" class="required">Вага (г)</label>
+                            <input type="number" id="weight" name="weight" step="0.1" required placeholder="350">
+                        </div>
+                        <div class="form-group">
+                            <label for="barcode">Штрихкод</label>
+                            <input type="text" id="barcode" name="barcode" placeholder="4820000001234">
+                        </div>
+                        <div class="form-group">
+                            <label for="pieces_per_box" class="required">Штук в ящику</label>
+                            <input type="number" id="pieces_per_box" name="pieces_per_box" min="1" required placeholder="12">
+                        </div>
+                        <div class="form-group">
+                            <label for="stock_pieces">Початковий запас (штук)</label>
+                            <input type="number" id="stock_pieces" name="stock_pieces" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="stock_boxes">Початковий запас (ящиків)</label>
+                            <input type="number" id="stock_boxes" name="stock_boxes" min="0" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="min_stock_pieces">Мінімальний запас (штук)</label>
+                            <input type="number" id="min_stock_pieces" name="min_stock_pieces" min="0" value="0">
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-success">➕ Додати товар</button>
+                        <button type="button" class="btn btn-secondary" onclick="clearForm()">🔄 Очистити</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                📋 Список товарів
+            </div>
+            <div class="card-body">
+                <div id="products-loading" class="loading">Завантаження товарів...</div>
+                <div id="products-content" style="display: none;">
+                    <div class="table-container">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th class="col-xs">ID</th>
+                                    <th class="col-lg">Назва</th>
+                                    <th class="col-sm">Код</th>
+                                    <th class="col-sm">Вага</th>
+                                    <th class="col-sm">Шт/Ящ</th>
+                                    <th class="col-sm">Запас (шт)</th>
+                                    <th class="col-sm">Запас (ящ)</th>
+                                    <th class="col-sm">Мін. запас</th>
+                                    <th class="col-md">Статус</th>
+                                    <th class="col-md text-right table-actions">Дії</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>✏️ Редагувати товар</h3>
+                <button class="close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-form">
+                    <input type="hidden" id="edit-id" name="id">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="edit-name">Назва товару</label>
+                            <input type="text" id="edit-name" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-code">Код товару</label>
+                            <input type="text" id="edit-code" name="code" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-weight">Вага (г)</label>
+                            <input type="number" id="edit-weight" name="weight" step="0.1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-barcode">Штрихкод</label>
+                            <input type="text" id="edit-barcode" name="barcode">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-pieces_per_box">Штук в ящику</label>
+                            <input type="number" id="edit-pieces_per_box" name="pieces_per_box" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-stock_pieces">Запас (штук)</label>
+                            <input type="number" id="edit-stock_pieces" name="stock_pieces" min="0" readonly style="background: #f8f9fa;">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-stock_boxes">Запас (ящиків)</label>
+                            <input type="number" id="edit-stock_boxes" name="stock_boxes" min="0" readonly style="background: #f8f9fa;">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-min_stock_pieces">Мінімальний запас</label>
+                            <input type="number" id="edit-min_stock_pieces" name="min_stock_pieces" min="0">
+                        </div>
+                    </div>
+                    <div class="product-form-hint">
+                        Залишки товару змінюються тільки через виробництво, списання, відвантаження або оприбуткування. Редагування тут недоступне.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" form="edit-form" class="btn btn-success">💾 Зберегти зміни</button>
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">❌ Скасувати</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/error-handler.js"></script>
+    <script src="/js/navigation.js"></script>
+    
+    <script>
+        const API_URL = '/api';
+        let currentEditId = null;
+        
+     // Функція екранування HTML для захисту від XSS
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = text.toString();
+    return div.innerHTML;
+}
+
+// Функція безпечної вставки HTML
+function safeInnerHTML(element, htmlContent) {
+    if (!element) return;
+    element.innerHTML = htmlContent;
+}   
+        // Завантажуємо дані при готовності DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            loadProducts();
+            loadStats();
+        });
+
+        // Завантаження товарів
+        async function loadProducts() {
+            const loadingEl = safeQuerySelector('#products-loading');
+            const contentEl = safeQuerySelector('#products-content');
+
+            try {
+                if (loadingEl) loadingEl.style.display = 'block';
+                if (contentEl) contentEl.style.display = 'none';
+
+                const response = await fetch(`${API_URL}/products`);
+                if (!response.ok) throw new Error('Помилка завантаження');
+                
+                const products = await response.json();
+                displayProducts(products);
+                
+                if (loadingEl) loadingEl.style.display = 'none';
+                if (contentEl) contentEl.style.display = 'block';
+            } catch (error) {
+                logError('Failed to load products', 'PRODUCTS_LOAD_ERROR', error);
+                showUserError('Помилка завантаження товарів: ' + error.message);
+                
+                if (loadingEl) {
+                    loadingEl.innerHTML = 'Помилка завантаження товарів';
+                }
+            }
+        }
+
+        // Завантаження статистики
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_URL}/stats`);
+                if (!response.ok) throw new Error('Помилка завантаження статистики');
+                
+                const stats = await response.json();
+                
+                const statsElements = {
+                    'total-products': stats.total_products,
+                    'total-pieces': stats.total_stock_pieces,
+                    'total-boxes': stats.total_stock_boxes,
+                    'low-stock': stats.low_stock_count
+                };
+
+                Object.entries(statsElements).forEach(([id, value]) => {
+                    const element = safeQuerySelector(`#${id}`);
+                    if (element) {
+                        element.textContent = value;
+                    }
+                });
+            } catch (error) {
+                logError('Failed to load stats', 'STATS_LOAD_ERROR', error);
+            }
+        }
+
+        // Відображення товарів
+        function displayProducts(products) {
+    const tbody = safeQuerySelector('#products-tbody');
+    if (!tbody) {
+        logError('Products table body not found', 'DOM_ERROR');
+        return;
+    }
+
+    tbody.innerHTML = '';
+
+    if (products.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="table-empty">Немає товарів</td></tr>';
+        return;
+    }
+
+    products.forEach(product => {
+        const row = document.createElement('tr');
+        const stockClass = getStockClass(product.stock_status);
+        const statusText = getStatusText(product.stock_status);
+        
+        safeInnerHTML(row, `
+            <td>${parseInt(product.id)}</td>
+            <td><strong>${escapeHtml(product.name)}</strong></td>
+            <td><code>${escapeHtml(product.code)}</code></td>
+            <td>${escapeHtml(product.weight)}г</td>
+            <td>${parseInt(product.pieces_per_box)}</td>
+            <td>${parseInt(product.stock_pieces)}</td>
+            <td>${parseInt(product.stock_boxes)}</td>
+            <td>${parseInt(product.min_stock_pieces)}</td>
+            <td><span class="${stockClass}">${escapeHtml(statusText)}</span></td>
+            <td class="table-actions">
+                <button class="btn btn-warning btn-small" onclick="editProduct(${parseInt(product.id)})" title="Редагувати">✏️</button>
+                <button class="btn btn-danger btn-small" onclick="deleteProduct(${parseInt(product.id)}, '${escapeHtml(product.name)}')" title="Видалити">🗑️</button>
+            </td>
+        `);
+        tbody.appendChild(row);
+    });
+}
+
+        // Додавання нового товару
+        const productForm = safeQuerySelector('#product-form');
+        if (productForm) {
+            productForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(e.target);
+                const productData = Object.fromEntries(formData.entries());
+                
+                try {
+                    const response = await fetch(`${API_URL}/products`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(productData)
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Помилка створення товару');
+                    }
+
+                    showUserError('Товар успішно додано!', 'success');
+                    clearForm();
+                    loadProducts();
+                    loadStats();
+                } catch (error) {
+                    logError('Failed to create product', 'PRODUCT_CREATE_ERROR', error);
+                    showUserError('Помилка додавання товару: ' + error.message);
+                }
+            });
+        }
+
+        // Редагування товару
+        async function editProduct(id) {
+            try {
+                const response = await fetch(`${API_URL}/products/${id}`);
+                if (!response.ok) throw new Error('Товар не знайдено');
+                
+                const product = await response.json();
+                
+                const editElements = {
+                    'edit-id': product.id,
+                    'edit-name': product.name,
+                    'edit-code': product.code,
+                    'edit-weight': product.weight,
+                    'edit-barcode': product.barcode || '',
+                    'edit-pieces_per_box': product.pieces_per_box,
+                    'edit-stock_pieces': product.stock_pieces,
+                    'edit-stock_boxes': product.stock_boxes,
+                    'edit-min_stock_pieces': product.min_stock_pieces
+                };
+
+                Object.entries(editElements).forEach(([id, value]) => {
+                    const element = safeQuerySelector(`#${id}`);
+                    if (element) {
+                        element.value = value;
+                    }
+                });
+                
+                currentEditId = id;
+                const modal = safeQuerySelector('#edit-modal');
+                if (modal) {
+                    modal.classList.add('show');
+                    modal.style.display = 'flex';
+                }
+            } catch (error) {
+                logError('Failed to load product for editing', 'PRODUCT_EDIT_LOAD_ERROR', error);
+                showUserError('Помилка завантаження товару: ' + error.message);
+            }
+        }
+
+        // Збереження змін
+        const editForm = safeQuerySelector('#edit-form');
+        if (editForm) {
+            editForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(e.target);
+                const productData = Object.fromEntries(formData.entries());
+                delete productData.id;
+                
+                try {
+                    const response = await fetch(`${API_URL}/products/${currentEditId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(productData)
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || 'Помилка оновлення товару');
+                    }
+
+                    showUserError('Товар успішно оновлено!', 'success');
+                    closeEditModal();
+                    loadProducts();
+                    loadStats();
+                } catch (error) {
+                    logError('Failed to update product', 'PRODUCT_UPDATE_ERROR', error);
+                    showUserError('Помилка оновлення товару: ' + error.message);
+                }
+            });
+        }
+
+        // Видалення товару
+        async function deleteProduct(id, name) {
+            if (!confirm(`Ви впевнені що хочете видалити товар "${name}"?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/products/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Помилка видалення товару');
+                }
+
+                showUserError('Товар успішно видалено!', 'success');
+                loadProducts();
+                loadStats();
+            } catch (error) {
+                logError('Failed to delete product', 'PRODUCT_DELETE_ERROR', error);
+                showUserError('Помилка видалення товару: ' + error.message);
+            }
+        }
+
+        // Допоміжні функції
+        function getStockClass(status) {
+            return `stock-${status}`;
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'good': 'Достатньо',
+                'warning': 'Увага',
+                'low': 'Низький запас'
+            };
+            return statusMap[status] || status;
+        }
+
+        function clearForm() {
+            const form = safeQuerySelector('#product-form');
+            if (form) {
+                form.reset();
+            }
+        }
+
+        function closeEditModal() {
+            const modal = safeQuerySelector('#edit-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                modal.style.display = 'none';
+            }
+            currentEditId = null;
+        }
+
+        // Закриття модального вікна при кліку поза ним
+        window.onclick = function(event) {
+            const modal = safeQuerySelector('#edit-modal');
+            if (event.target === modal) {
+                closeEditModal();
+            }
+        }
+        
+        // Функція оновлення для цієї сторінки
+        window.refreshPageContent = function() {
+            loadProducts();
+            loadStats();
+        };
+
+        // Додаємо автооновлення при фокусі сторінки
+        window.addEventListener('focus', function() {
+            if (typeof window.refreshPageContent === 'function') {
+                window.refreshPageContent();
+            }
+        });
+    </script>
+</body>
+</html>

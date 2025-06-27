@@ -1,0 +1,363 @@
+/* styles/tables.css - Стилі для таблиць */
+
+/* Контейнер таблиці для горизонтального скролу */
+.table-container {
+    overflow-x: auto;
+    margin: 1rem 0;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Базова таблиця */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    font-size: 0.9rem;
+}
+
+/* Заголовки таблиці */
+.table th {
+    background: #f8f9fa;
+    color: #2c3e50;
+    font-weight: bold;
+    padding: 1rem 0.75rem;
+    text-align: left;
+    border-bottom: 2px solid #dee2e6;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.table th:first-child {
+    border-radius: 8px 0 0 0;
+}
+
+.table th:last-child {
+    border-radius: 0 8px 0 0;
+}
+
+/* Комірки таблиці */
+.table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #ecf0f1;
+    vertical-align: middle;
+}
+
+/* Рядки таблиці */
+.table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.table tbody tr:nth-child(even) {
+    background: #fdfdfd;
+}
+
+.table tbody tr:nth-child(even):hover {
+    background: #f8f9fa;
+}
+
+/* Варіанти таблиць */
+.table-striped tbody tr:nth-child(odd) {
+    background: white;
+}
+
+.table-striped tbody tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+.table-bordered {
+    border: 1px solid #dee2e6;
+}
+
+.table-bordered th,
+.table-bordered td {
+    border: 1px solid #dee2e6;
+}
+
+.table-borderless th,
+.table-borderless td {
+    border: none;
+}
+
+/* Компактна таблиця */
+.table-sm th,
+.table-sm td {
+    padding: 0.5rem;
+    font-size: 0.85rem;
+}
+
+/* Розміри колонок */
+.col-xs { width: 5%; }
+.col-sm { width: 10%; }
+.col-md { width: 15%; }
+.col-lg { width: 20%; }
+.col-xl { width: 25%; }
+
+/* Вирівнювання тексту */
+.text-left { text-align: left !important; }
+.text-center { text-align: center !important; }
+.text-right { text-align: right !important; }
+
+/* Кольорові рядки */
+.table-success {
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.table-danger {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.table-warning {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+.table-info {
+    background-color: rgba(23, 162, 184, 0.1);
+}
+
+/* Статусні бейджі в таблицях */
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-new { 
+    background: #e3f2fd; 
+    color: #1976d2; 
+}
+
+.status-confirmed { 
+    background: #f3e5f5; 
+    color: #7b1fa2; 
+}
+
+.status-in_production { 
+    background: #fff3e0; 
+    color: #f57c00; 
+}
+
+.status-ready { 
+    background: #e8f5e8; 
+    color: #388e3c; 
+}
+
+.status-shipped { 
+    background: #e1f5fe; 
+    color: #0288d1; 
+}
+
+.status-completed { 
+    background: #e8f5e8; 
+    color: #2e7d32; 
+}
+
+/* Дії в таблицях */
+.table-actions {
+    white-space: nowrap;
+    width: 1%;
+}
+
+.table-actions .btn {
+    margin: 0 0.125rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8rem;
+}
+
+/* Порожня таблиця */
+.table-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.table-empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* Пагінація таблиць */
+.table-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 0 0 8px 8px;
+}
+
+.pagination-info {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Фільтри таблиць */
+.table-filters {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table-search {
+    display: flex;
+    gap: 1rem;
+    align-items: end;
+    flex-wrap: wrap;
+}
+
+.table-search .form-group {
+    margin-bottom: 0;
+    min-width: 200px;
+}
+
+/* Експорт */
+.table-export {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Сортування */
+.sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
+
+.sortable:hover {
+    background: #e9ecef;
+}
+
+.sortable::after {
+    content: "⇅";
+    position: absolute;
+    right: 0.5rem;
+    opacity: 0.5;
+}
+
+.sortable.asc::after {
+    content: "↑";
+    opacity: 1;
+}
+
+.sortable.desc::after {
+    content: "↓";
+    opacity: 1;
+}
+
+/* Адаптивність для таблиць */
+@media (max-width: 768px) {
+    .table-container {
+        margin: 0.5rem 0;
+    }
+    
+    .table th,
+    .table td {
+        padding: 0.5rem 0.25rem;
+        font-size: 0.8rem;
+    }
+    
+    .table-actions .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.7rem;
+        margin: 0 0.1rem;
+    }
+    
+    /* Стек кнопок на мобільних */
+    .table-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .table-pagination {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .table-search {
+        flex-direction: column;
+    }
+    
+    .table-search .form-group {
+        min-width: auto;
+    }
+    
+    .table-export {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
+/* Дуже маленькі екрани - картковий вигляд */
+@media (max-width: 480px) {
+    .table-responsive-stack {
+        display: none;
+    }
+    
+    .table-cards {
+        display: block;
+    }
+    
+    .table-card {
+        background: white;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border: 1px solid #e9ecef;
+    }
+    
+    .table-card-header {
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #ecf0f1;
+    }
+    
+    .table-card-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.25rem;
+        font-size: 0.9rem;
+    }
+    
+    .table-card-label {
+        font-weight: 500;
+        color: #7f8c8d;
+    }
+    
+    .table-card-value {
+        color: #2c3e50;
+        text-align: right;
+    }
+    
+    .table-card-actions {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #ecf0f1;
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+}
