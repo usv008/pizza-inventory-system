@@ -74,6 +74,122 @@
             color: #27ae60;
             font-weight: 500;
         }
+
+        /* Стилі для модального вікна перегляду замовлення */
+        .order-info-section,
+        .order-items-section,
+        .order-summary-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #3498db;
+        }
+
+        .order-info-section h3,
+        .order-items-section h3,
+        .order-summary-section h3 {
+            margin: 0 0 1.5rem 0;
+            color: #2c3e50;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .info-item-full {
+            grid-column: 1 / -1;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #34495e;
+            font-size: 0.9rem;
+        }
+
+        .info-value {
+            color: #2c3e50;
+            font-size: 1rem;
+            word-wrap: break-word;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .summary-item {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .summary-label {
+            font-weight: 600;
+            color: #34495e;
+            font-size: 0.9rem;
+        }
+
+        .summary-value {
+            font-weight: bold;
+            color: #3498db;
+            font-size: 1.1rem;
+        }
+
+        /* Адаптивність для модального вікна перегляду */
+        @media (max-width: 768px) {
+            .order-info-section,
+            .order-items-section,
+            .order-summary-section {
+                padding: 1rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .info-item {
+                padding: 0.75rem;
+                background: white;
+                border-radius: 6px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .summary-item {
+                flex-direction: column;
+                gap: 0.5rem;
+                text-align: center;
+            }
+        }
         
         /* Існуючі стилі залишаються без змін */
         .status-badge {
@@ -358,9 +474,19 @@
 </div>
 
     <div id="view-order-modal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeViewModal()">&times;</span>
-            <div id="order-details">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="view-order-title">📋 Перегляд замовлення</h2>
+                <span class="modal-close" onclick="closeViewModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="order-details">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeViewModal()">
+                    ❌ Закрити
+                </button>
             </div>
         </div>
     </div>
@@ -1044,7 +1170,34 @@
                 const order = orderData.success ? orderData.data : orderData;
                 
                 displayOrderDetails(order);
-                document.getElementById('view-order-modal').style.display = 'block';
+                
+                // Відкриваємо модальне вікно з анімацією
+                const modal = document.getElementById('view-order-modal');
+                modal.style.display = 'block';
+                modal.classList.add('show');
+                document.body.style.overflow = 'hidden';
+                
+                // Прокручуємо до верху модального вікна
+                const modalBody = modal.querySelector('.modal-body');
+                if (modalBody) {
+                    modalBody.scrollTop = 0;
+                }
+                
+                // Додаємо обробник для закриття при кліку поза модальним вікном
+                modal.onclick = function(event) {
+                    if (event.target === modal) {
+                        closeViewModal();
+                    }
+                };
+                
+                // Додаємо обробник ESC клавіші
+                const escapeHandler = function(event) {
+                    if (event.key === 'Escape') {
+                        closeViewModal();
+                        document.removeEventListener('keydown', escapeHandler);
+                    }
+                };
+                document.addEventListener('keydown', escapeHandler);
             } catch (error) {
                 console.error('Помилка:', error);
                 showAlert('Помилка завантаження замовлення: ' + error.message, 'error');
@@ -1053,6 +1206,12 @@
 
         // Відображення деталей замовлення з партіями
         function displayOrderDetails(order) {
+            // Оновлюємо заголовок модального вікна
+            const titleElement = document.getElementById('view-order-title');
+            if (titleElement) {
+                titleElement.textContent = `📋 Замовлення ${order.order_number}`;
+            }
+            
             const detailsDiv = document.getElementById('order-details');
             const orderDate = new Date(order.order_date).toLocaleDateString('uk-UA');
             const deliveryDate = order.delivery_date ? new Date(order.delivery_date).toLocaleDateString('uk-UA') : 'Не вказана';
@@ -1075,49 +1234,109 @@
                     return `
                         <tr>
                             <td>
-                                ${item.product_name} (${item.product_code})
+                                <strong>${escapeHtml(item.product_name)}</strong> (${escapeHtml(item.product_code)})
                                 ${batchesInfo}
                             </td>
-                            <td>${item.quantity} шт</td>
-                            <td>${item.boxes} ящ + ${item.pieces} шт</td>
-                            <td>${item.notes || '-'}</td>
+                            <td>${escapeHtml(item.quantity)} шт</td>
+                            <td>${escapeHtml(item.boxes)} ящ + ${escapeHtml(item.pieces)} шт</td>
+                            <td>${escapeHtml(item.notes || '-')}</td>
                         </tr>
                     `;
                 }).join('');
             }
             
             detailsDiv.innerHTML = `
-                <h2>Замовлення ${order.order_number}</h2>
-                <div style="margin: 1rem 0;">
-                    <p><strong>Клієнт:</strong> ${order.client_name}</p>
-                    <p><strong>Контакти:</strong> ${order.client_contact || '-'}</p>
-                    <p><strong>Дата замовлення:</strong> ${orderDate}</p>
-                    <p><strong>Дата відвантаження:</strong> ${deliveryDate}</p>
-                    <p><strong>Статус:</strong> <span class="status-badge status-${order.status.toLowerCase()}">${statusText}</span></p>
-                    <p><strong>Створив:</strong> ${order.created_by}</p>
-                    ${order.notes ? `<p><strong>Примітки:</strong> ${order.notes}</p>` : ''}
+                <div class="order-info-section">
+                    <h3>ℹ️ Основна інформація</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">👤 Клієнт:</span>
+                            <span class="info-value">${escapeHtml(order.client_name)}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">📞 Контакти:</span>
+                            <span class="info-value">${escapeHtml(order.client_contact || '-')}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">📅 Дата замовлення:</span>
+                            <span class="info-value">${orderDate}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">🚚 Дата відвантаження:</span>
+                            <span class="info-value">${deliveryDate}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">📊 Статус:</span>
+                            <span class="info-value"><span class="status-badge status-${order.status.toLowerCase()}">${statusText}</span></span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">👨‍💼 Створив:</span>
+                            <span class="info-value">${escapeHtml(order.created_by)}</span>
+                        </div>
+                        ${order.notes ? `
+                        <div class="info-item info-item-full">
+                            <span class="info-label">📝 Примітки:</span>
+                            <span class="info-value">${escapeHtml(order.notes)}</span>
+                        </div>
+                        ` : ''}
+                    </div>
                 </div>
                 
-                <h3>Товари в замовленні:</h3>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Товар</th>
-                            <th>Кількість</th>
-                            <th>Упаковка</th>
-                            <th>Примітки</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${itemsHtml}
-                    </tbody>
-                </table>
+                <div class="order-items-section">
+                    <h3>📦 Товари в замовленні</h3>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Товар</th>
+                                    <th>Кількість</th>
+                                    <th>Упаковка</th>
+                                    <th>Примітки</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${itemsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
                 
-                <div style="margin-top: 2rem;">
-                    <p><strong>Загальна кількість:</strong> ${order.total_quantity} шт</p>
-                    <p><strong>Загальна кількість ящиків:</strong> ${order.total_boxes} ящ</p>
+                <div class="order-summary-section">
+                    <h3>📊 Підсумок замовлення</h3>
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-label">📋 Позицій:</span>
+                            <span class="summary-value">${order.items ? order.items.length : 0}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">📦 Загальна кількість:</span>
+                            <span class="summary-value">${order.total_quantity} шт</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">📦 Загальна кількість ящиків:</span>
+                            <span class="summary-value">${order.total_boxes} ящ</span>
+                        </div>
+                    </div>
                 </div>
             `;
+        }
+
+        // Функція закриття модального вікна перегляду замовлення
+        function closeViewModal() {
+            const modal = document.getElementById('view-order-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                
+                // Видаляємо обробники подій
+                modal.onclick = null;
+                
+                // Анімація закриття
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                }, 300);
+                
+                document.body.style.overflow = 'auto';
+            }
         }
 
         // Зміна статусу замовлення (залишається без змін)

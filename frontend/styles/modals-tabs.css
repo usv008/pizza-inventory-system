@@ -28,15 +28,17 @@
 .modal-content {
     background: white;
     margin: 2% auto;
-    padding: 10px;
+    padding: 0;
     border-radius: 10px;
     width: 90%;
     max-width: 600px;
-    max-height: 100vh;
+    max-height: 95vh;
     overflow: hidden;
     box-shadow: 0 10px 40px rgba(0,0,0,0.2);
     animation: modalSlideIn 0.3s ease;
     position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 @keyframes modalSlideIn {
@@ -58,6 +60,7 @@
     justify-content: space-between;
     align-items: center;
     border-radius: 10px 10px 0 0;
+    flex-shrink: 0;
 }
 
 .modal-header h2,
@@ -68,8 +71,9 @@
 
 .modal-body {
     padding: 2rem;
-    max-height: 70vh;
     overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 
 .modal-footer {
@@ -80,10 +84,12 @@
     justify-content: flex-end;
     gap: 0.5rem;
     border-top: 1px solid #e9ecef;
+    flex-shrink: 0;
 }
 
 /* Кнопка закриття */
-.close {
+.close,
+.modal-close {
     color: rgba(255,255,255,0.8);
     font-size: 2rem;
     font-weight: bold;
@@ -100,7 +106,8 @@
     justify-content: center;
 }
 
-.close:hover {
+.close:hover,
+.modal-close:hover {
     color: white;
     transform: scale(1.1);
 }
@@ -112,6 +119,11 @@
 
 .modal-xl .modal-content {
     max-width: 1200px;
+}
+
+.modal-large .modal-content {
+    max-width: 1000px;
+    width: 95%;
 }
 
 /* Маленькі модальні вікна */
@@ -323,11 +335,11 @@
     .modal-content {
         width: 95%;
         margin: 1% auto;
+        max-height: 98vh;
     }
     
     .modal-body {
         padding: 1rem;
-        max-height: 60vh;
     }
     
     .modal-header,
@@ -375,12 +387,22 @@
 @media (max-width: 480px) {
     .modal-content {
         width: 98%;
-        max-height: 95vh;
+        max-height: 98vh;
+        margin: 1% auto;
     }
     
     .modal-header h2,
     .modal-header h3 {
         font-size: 1.1rem;
+    }
+    
+    .modal-header,
+    .modal-footer {
+        padding: 0.75rem 1rem;
+    }
+    
+    .modal-body {
+        padding: 0.75rem 1rem;
     }
     
     .close {
@@ -396,6 +418,42 @@
     .tab {
         flex: 1 1 50%;
         min-width: 120px;
+    }
+}
+
+/* Стилі для плавної прокрутки в модальних вікнах */
+.modal-body {
+    scrollbar-width: thin;
+    scrollbar-color: #bdc3c7 #ecf0f1;
+}
+
+.modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: #ecf0f1;
+    border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: #bdc3c7;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: #95a5a6;
+}
+
+/* Додаткові стилі для великих модальних вікон */
+.modal-large .modal-body {
+    padding: 1.5rem 2rem;
+}
+
+@media (max-width: 768px) {
+    .modal-large .modal-body {
+        padding: 1rem;
     }
 }
 
