@@ -205,4 +205,145 @@
         flex: 1;
         min-width: 120px;
     }
+
+/* Стилі для попереднього перегляду клієнта */
+.client-summary {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+    border-left: 4px solid #3498db;
+    transition: all 0.3s ease;
+}
+
+.client-summary:hover {
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.1);
+    transform: translateY(-1px);
+}
+
+.client-summary h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+#clientPreview {
+    color: #7f8c8d;
+    font-style: italic;
+    line-height: 1.5;
+    white-space: pre-line;
+}
+
+/* Анімації для попереднього перегляду */
+.preview-updating {
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.preview-updated {
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
+/* Покращені стилі для полів форми клієнта */
+#client-form .form-group input:focus,
+#client-form .form-group textarea:focus {
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+    transform: translateY(-1px);
+}
+
+#client-form .form-group {
+    transition: all 0.3s ease;
+}
+
+#client-form .form-group:hover {
+    transform: translateY(-1px);
+}
+
+/* Анімація помилок для обов'язкових полів */
+#client-form .form-group.has-error {
+    animation: fieldError 0.3s ease;
+}
+
+@keyframes fieldError {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* Покращені стилі для textarea */
+#client-form textarea {
+    resize: vertical;
+    min-height: 80px;
+    transition: all 0.3s ease;
+}
+
+#client-form textarea:focus {
+    min-height: 120px;
+}
+
+/* Інтерактивні стилі для підказок */
+#client-form small {
+    transition: color 0.3s ease;
+}
+
+#client-form .form-group:hover small {
+    color: #3498db;
+}
+
+/* Стилі валідації для форми клієнта */
+#client-form .form-group.has-error input,
+#client-form .form-group.has-error textarea,
+#client-form .form-group.has-error select {
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
+}
+
+#client-form .form-group.has-success input,
+#client-form .form-group.has-success textarea,
+#client-form .form-group.has-success select {
+    border-color: #27ae60;
+    box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
+}
+
+/* Анімації модального вікна клієнта */
+#client-modal {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#client-modal.modal-opening {
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+#client-modal.modal-closing {
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+/* Адаптивність для форми клієнта */
+@media (max-width: 768px) {
+    .client-summary {
+        margin: 1rem 0;
+        padding: 0.75rem;
+    }
+    
+    .client-summary h4 {
+        font-size: 0.9rem;
+    }
+    
+    #clientPreview {
+        font-size: 0.85rem;
+    }
+    
+    #client-form .form-group:hover {
+        transform: none; /* Відключаємо hover ефекти на мобільних */
+    }
+    
+    #client-form textarea:focus {
+        min-height: 100px; /* Менше розширення на мобільних */
+    }
+}
 }

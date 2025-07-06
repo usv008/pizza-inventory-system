@@ -392,6 +392,7 @@
     </div>
 
     <script src="/js/error-handler.js"></script>
+    <script src="/js/auth.js"></script>
     <script src="/js/navigation.js"></script>
     <script src="js/arrival.js"></script>
     <script>
@@ -414,8 +415,12 @@
         let productBatches = {}; // Кеш партій по товарах
 
         // Завантаження даних при відкритті сторінки
-        document.addEventListener('DOMContentLoaded', function() {
-            initializePage();
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Перевіряємо аутентифікацію
+            const isAuthenticated = await authManager.requireAuth();
+            if (isAuthenticated) {
+                initializePage();
+            }
         });
 
         async function initializePage() {
@@ -538,29 +543,47 @@
                     batchInfo.textContent = 'Завантаження партій...';
                 }
                 
-                const response = await fetch(`${API_URL}/products/${productId}/batches`);
+                // ВИПРАВЛЕНО: додаємо параметр includeExpired=true щоб показувати просрочені партії для списання
+                const response = await fetch(`${API_URL}/products/${productId}/batches?includeExpired=true`);
                 if (!response.ok) throw new Error('Помилка завантаження партій');
                 
                 const batches = await response.json();
+                // ВИПРАВЛЕНО: показуємо ВСІ партії з кількістю > 0, включаючи просрочені
                 const activeBatches = batches.filter(b => b.available_quantity > 0);
                 
                 if (batchSelect) {
                     batchSelect.innerHTML = '<option value="">Оберіть партію...</option>';
                     
+                    // Сортуємо партії: спочатку прострочені, потім що закінчуються, потім активні
+                    activeBatches.sort((a, b) => {
+                        if (a.is_expired && !b.is_expired) return -1;
+                        if (!a.is_expired && b.is_expired) return 1;
+                        if (a.is_expiring && !b.is_expiring) return -1;
+                        if (!a.is_expiring && b.is_expiring) return 1;
+                        return new Date(a.batch_date) - new Date(b.batch_date);
+                    });
+                    
                     activeBatches.forEach(batch => {
                         const option = document.createElement('option');
                         option.value = batch.id;
-                        option.textContent = `${batch.batch_date} - ${batch.available_quantity} шт`;
-                        option.setAttribute('data-available', batch.available_quantity);
+                        const batchDate = new Date(batch.batch_date).toLocaleDateString('uk-UA');
                         
-                        // Додаємо індикатор статусу
-                        if (batch.is_expiring) {
-                            option.textContent += ' ⚠️';
-                            option.style.color = '#f39c12';
-                        } else if (batch.is_expired) {
-                            option.textContent += ' ❌';
+                        // Формуємо текст опції з індикаторами статусу
+                        if (batch.is_expired || batch.days_to_expiry <= 0) {
+                            option.textContent = `${batchDate} - ${batch.available_quantity} шт ❌ ПРОСТРОЧЕНА`;
                             option.style.color = '#e74c3c';
+                            option.style.fontWeight = 'bold';
+                        } else if (batch.is_expiring || batch.days_to_expiry <= 7) {
+                            option.textContent = `${batchDate} - ${batch.available_quantity} шт ⚠️ ${Math.ceil(batch.days_to_expiry)} дн.`;
+                            option.style.color = '#f39c12';
+                            option.style.fontWeight = 'bold';
+                        } else {
+                            option.textContent = `${batchDate} - ${batch.available_quantity} шт ✅ Активна`;
+                            option.style.color = '#27ae60';
                         }
+                        
+                        option.setAttribute('data-available', batch.available_quantity);
+                        option.setAttribute('data-status', batch.batch_status || (batch.is_expired ? 'EXPIRED' : batch.is_expiring ? 'EXPIRING' : 'ACTIVE'));
                         
                         batchSelect.appendChild(option);
                     });
@@ -657,8 +680,19 @@
                     try {
                         const contentType = response.headers.get('content-type');
                         if (contentType && contentType.includes('application/json')) {
-                            const error = await response.json();
-                            errorMessage = error.error || error.message || errorMessage;
+                            const errorData = await response.json();
+                            // Обробляємо новий формат API відповіді
+                            if (errorData.error) {
+                                if (typeof errorData.error === 'string') {
+                                    errorMessage = errorData.error;
+                                } else if (errorData.error.message) {
+                                    errorMessage = errorData.error.message;
+                                } else if (errorData.error.details) {
+                                    errorMessage = errorData.error.details;
+                                }
+                            } else if (errorData.message) {
+                                errorMessage = errorData.message;
+                            }
                         } else {
                             errorMessage = `Помилка сервера (${response.status})`;
                         }
@@ -670,7 +704,9 @@
                 }
 
                 const result = await response.json();
-                showUserError(`Виробництво додано! Партія: ${result.batch_date || productionData.production_date}`, 'success');
+                // Обробляємо новий формат API відповіді
+                const productionResult = result.success ? result.data : result;
+                showUserError(`Виробництво додано! Партія: ${productionResult.batch_date || productionData.production_date}`, 'success');
                 clearProductionForm();
                 await Promise.all([loadProduction(), loadStats()]);
                 
@@ -802,7 +838,9 @@
                 const response = await fetch(`${API_URL}/products`);
                 if (!response.ok) throw new Error('Помилка завантаження товарів');
                 
-                products = await response.json();
+                const result = await response.json();
+                // Обробляємо новий API формат {success: true, data: [...]}
+                products = result.success ? result.data : result;
                 updateProductSelects();
                 populateBatchProductFilter();
                 
@@ -841,7 +879,7 @@
             });
         }
 
-        // Завантаження статистики з партіями
+        // Завантаження статистики з партійними даними (синхронізовано)
         async function loadStats() {
             try {
                 const [statsResponse, batchesResponse] = await Promise.all([
@@ -849,28 +887,49 @@
                     fetch(`${API_URL}/batches/grouped`)
                 ]);
                 
+                // Завантажуємо базову статистику для кількості товарів
+                let totalProducts = 0;
+                
                 if (statsResponse.ok) {
                     const stats = await statsResponse.json();
-                    
-                    const statsElements = {
-                        'total-products': stats.total_products,
-                        'total-pieces': stats.total_stock_pieces,
-                        'total-boxes': stats.total_stock_boxes
-                    };
-
-                    Object.entries(statsElements).forEach(([id, value]) => {
-                        const element = safeQuerySelector(`#${id}`);
-                        if (element) element.textContent = value;
-                    });
+                    totalProducts = stats.total_products || 0;
                 }
                 
-                if (batchesResponse.ok) {
-                    const batchesData = await batchesResponse.json();
-                    const totalBatches = batchesData.reduce((sum, p) => sum + (p.batches_count || 0), 0);
+                // Обчислюємо статистику з партійних даних (більш точно)
+                let totalStock = 0;
+                let totalBoxes = 0;
+                let totalBatches = 0;
+                
+                                 if (batchesResponse.ok) {
+                     const batchesData = await batchesResponse.json();
+                     // Обробляємо null значення - коли товар без партій
+                     totalStock = batchesData.reduce((sum, p) => {
+                         const available = p.total_available !== null && p.total_available !== undefined ? p.total_available : 0;
+                         return sum + available;
+                     }, 0);
+                     totalBoxes = batchesData.reduce((sum, p) => {
+                         const boxes = p.total_boxes !== null && p.total_boxes !== undefined ? p.total_boxes : 0;
+                         return sum + boxes;
+                     }, 0);
+                     totalBatches = batchesData.reduce((sum, p) => sum + (p.batches_count || 0), 0);
                     
-                    const batchesElement = safeQuerySelector('#total-batches');
-                    if (batchesElement) batchesElement.textContent = totalBatches;
+                    // Якщо не отримали базову статистику, рахуємо кількість товарів
+                    if (!totalProducts) {
+                        totalProducts = batchesData.length;
+                    }
                 }
+                
+                const statsElements = {
+                    'total-products': totalProducts,
+                    'total-pieces': totalStock,
+                    'total-boxes': totalBoxes,
+                    'total-batches': totalBatches
+                };
+
+                Object.entries(statsElements).forEach(([id, value]) => {
+                    const element = safeQuerySelector(`#${id}`);
+                    if (element) element.textContent = value;
+                });
                 
             } catch (error) {
                 logError('Failed to load stats', 'STATS_LOAD_ERROR', error);
@@ -889,7 +948,9 @@
                 const response = await fetch(`${API_URL}/production`);
                 if (!response.ok) throw new Error('Помилка завантаження виробництва');
                 
-                const production = await response.json();
+                const result = await response.json();
+                // Обробляємо новий формат API відповіді
+                const production = result.success ? result.data : result;
                 displayProduction(production);
                 
                 if (loadingEl) loadingEl.style.display = 'none';
@@ -1051,7 +1112,9 @@
                 const response = await fetch(`${API_URL}/writeoffs`);
                 if (!response.ok) throw new Error('Помилка завантаження списання');
                 
-                const writeoffs = await response.json();
+                const result = await response.json();
+                // Обробляємо новий формат API відповіді
+                const writeoffs = result.success ? result.data : result;
                 displayWriteoffs(writeoffs);
                 
                 if (loadingEl) loadingEl.style.display = 'none';
@@ -1115,7 +1178,9 @@
                 const response = await fetch(`${API_URL}/movements?${queryParams.toString()}`);
                 if (!response.ok) throw new Error('Помилка завантаження рухів');
                 
-                const movements = await response.json();
+                const result = await response.json();
+                // Обробляємо новий формат API відповіді
+                const movements = result.success ? result.data : result;
                 displayMovements(movements);
                 
                 if (loadingEl) loadingEl.style.display = 'none';

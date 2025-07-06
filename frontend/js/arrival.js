@@ -48,7 +48,10 @@ function renderArrivalItems() {
     });
     
     // Підтягнути продукти
-    fetch('/api/products').then(r=>r.json()).then(products => {
+    fetch('/api/products').then(r=>r.json()).then(result => {
+        // Обробляємо новий формат API відповіді {success: true, data: [...]}
+        const products = result.success ? result.data : result;
+        
         document.querySelectorAll('.arrival-product').forEach(sel => {
             const idx = parseInt(sel.dataset.idx);
             
@@ -65,6 +68,17 @@ function renderArrivalItems() {
         });
     }).catch(error => {
         console.error('Помилка завантаження товарів:', error);
+        
+        // Показуємо помилку користувачу
+        document.querySelectorAll('.arrival-product').forEach(sel => {
+            sel.innerHTML = '<option value="">❌ Помилка завантаження товарів</option>';
+            sel.disabled = true;
+        });
+        
+        // Показуємо глобальну помилку якщо є функція
+        if (typeof showUserError === 'function') {
+            showUserError('Помилка завантаження товарів: ' + error.message);
+        }
     });
     
     // Обробники для полів

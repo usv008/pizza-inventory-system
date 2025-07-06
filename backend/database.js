@@ -159,6 +159,81 @@ function initDatabase() {
                 (id, daily_capacity, working_hours, min_batch_size) 
                 VALUES (1, 500, 8, 10)`);
 
+            // Таблиця користувачів
+            db.run(`CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                email TEXT UNIQUE,
+                phone TEXT,
+                password_hash TEXT,
+                role TEXT NOT NULL DEFAULT 'ПАКУВАЛЬНИК',
+                permissions TEXT DEFAULT '{}',
+                first_login INTEGER DEFAULT 1,
+                active INTEGER DEFAULT 1,
+                created_by INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (created_by) REFERENCES users (id)
+            )`);
+
+            // Таблиця сесій
+            db.run(`CREATE TABLE IF NOT EXISTS user_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id TEXT UNIQUE NOT NULL,
+                user_id INTEGER NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME NOT NULL,
+                ip_address TEXT,
+                user_agent TEXT,
+                active INTEGER DEFAULT 1,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )`);
+
+            // Таблиця аудиту
+            db.run(`CREATE TABLE IF NOT EXISTS user_audit (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                action TEXT NOT NULL,
+                resource_type TEXT,
+                resource_id INTEGER,
+                details TEXT,
+                ip_address TEXT,
+                user_agent TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )`);
+
+            // Таблиця подій безпеки
+            db.run(`CREATE TABLE IF NOT EXISTS security_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_type TEXT NOT NULL,
+                user_id INTEGER,
+                ip_address TEXT,
+                details TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )`);
+
+            // Таблиця логів API
+            db.run(`CREATE TABLE IF NOT EXISTS api_audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                method TEXT NOT NULL,
+                path TEXT NOT NULL,
+                ip_address TEXT,
+                user_agent TEXT,
+                status_code INTEGER,
+                duration INTEGER,
+                success INTEGER DEFAULT 1,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id)
+            )`);
+
+            // Створення адміністратора за замовчуванням
+            db.run(`INSERT OR IGNORE INTO users 
+                (id, username, password_hash, role, permissions, first_login, active) 
+                VALUES (1, 'admin', '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'ДИРЕКТОР', '{}', 0, 1)`);
+
             console.log('📦 База даних ініціалізована успішно');
             resolve();
         });
@@ -517,6 +592,14 @@ const clientQueries = {
             else resolve(rows);
         });
     }),
+    
+    getById: (id) => new Promise((resolve, reject) => {
+        db.get("SELECT * FROM clients WHERE id = ? AND is_active = 1", [id], (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+        });
+    }),
+    
     create: (client) => new Promise((resolve, reject) => {
         const { name, contact_person, phone, email, address, notes } = client;
         db.run(`INSERT INTO clients (name, contact_person, phone, email, address, notes, updated_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
@@ -527,6 +610,18 @@ const clientQueries = {
             }
         );
     }),
+    
+    update: (id, client) => new Promise((resolve, reject) => {
+        const { name, contact_person, phone, email, address, notes } = client;
+        db.run(`UPDATE clients SET name = ?, contact_person = ?, phone = ?, email = ?, address = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND is_active = 1`,
+            [name, contact_person, phone, email, address, notes, id],
+            function(err) {
+                if (err) reject(err);
+                else resolve({ changes: this.changes });
+            }
+        );
+    }),
+    
     deactivate: (id) => new Promise((resolve, reject) => {
         db.run("UPDATE clients SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [id], function(err) {
             if (err) reject(err);
@@ -615,6 +710,101 @@ const orderQueries = {
                 resolve({ changes: this.changes });
             }
         );
+    }),
+
+    update: (id, orderData) => new Promise((resolve, reject) => {
+        const { client_name, client_contact, delivery_date, status, notes, items } = orderData;
+        
+        db.serialize(() => {
+            db.run('BEGIN TRANSACTION');
+            
+            // Оновлюємо основні дані замовлення
+            db.run(
+                `UPDATE orders SET client_name = ?, client_contact = ?, delivery_date = ?, status = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                [client_name, client_contact, delivery_date, status || 'NEW', notes, id],
+                function(err) {
+                    if (err) {
+                        console.error('[orderQueries.update] DB ERROR (main):', err);
+                        db.run('ROLLBACK');
+                        return reject(err);
+                    }
+                    
+                    if (!items || !Array.isArray(items)) {
+                        // Якщо немає позицій для оновлення - просто завершуємо
+                        db.run('COMMIT');
+                        return resolve({ changes: this.changes });
+                    }
+                    
+                    // Видаляємо старі позиції
+                    db.run('DELETE FROM order_items WHERE order_id = ?', [id], (err) => {
+                        if (err) {
+                            console.error('[orderQueries.update] DB ERROR (delete items):', err);
+                            db.run('ROLLBACK');
+                            return reject(err);
+                        }
+                        
+                        if (items.length === 0) {
+                            // Оновлюємо загальну кількість до 0
+                            db.run(`UPDATE orders SET total_quantity = 0, total_boxes = 0 WHERE id = ?`, [id], (err) => {
+                                if (err) console.error('Помилка оновлення загальної кількості:', err);
+                                db.run('COMMIT');
+                                resolve({ changes: this.changes });
+                            });
+                            return;
+                        }
+                        
+                        // Додаємо нові позиції
+                        let completed = 0;
+                        let hasError = false;
+                        const totalQuantity = items.reduce((sum, item) => sum + parseInt(item.quantity), 0);
+                        
+                        items.forEach((item, index) => {
+                            if (hasError) return;
+                            
+                            // Отримуємо pieces_per_box для товару
+                            db.get('SELECT pieces_per_box FROM products WHERE id = ?', [item.product_id], (err, product) => {
+                                if (err || !product) {
+                                    hasError = true;
+                                    db.run('ROLLBACK');
+                                    return reject(new Error(`Товар з ID ${item.product_id} не знайдено`));
+                                }
+                                
+                                const piecesPerBox = product.pieces_per_box || 1;
+                                const boxes = Math.floor(item.quantity / piecesPerBox);
+                                const pieces = item.quantity % piecesPerBox;
+                                
+                                db.run(
+                                    `INSERT INTO order_items (order_id, product_id, quantity, boxes, pieces, notes, created_at) 
+                                     VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+                                    [id, item.product_id, item.quantity, boxes, pieces, item.notes || ''],
+                                    function(err) {
+                                        if (err) {
+                                            hasError = true;
+                                            console.error('[orderQueries.update] DB ERROR (insert item):', err);
+                                            db.run('ROLLBACK');
+                                            return reject(err);
+                                        }
+                                        
+                                        completed++;
+                                        if (completed === items.length) {
+                                            // Оновлюємо загальну кількість
+                                            db.run(`UPDATE orders SET total_quantity = ?, total_boxes = ? WHERE id = ?`, 
+                                                [totalQuantity, Math.floor(totalQuantity / 10), id], (err) => {
+                                                if (err) {
+                                                    console.error('Помилка оновлення загальної кількості:', err);
+                                                }
+                                                db.run('COMMIT');
+                                                resolve({ changes: this.changes });
+                                            });
+                                        }
+                                    }
+                                );
+                            });
+                        });
+                    });
+                }
+            );
+        });
     }),
 
     create: (order) => new Promise((resolve, reject) => {
@@ -806,6 +996,24 @@ const orderQueries = {
                 );
             });
         }
+    }),
+
+    delete: (id) => new Promise((resolve, reject) => {
+        db.serialize(() => {
+            db.run('BEGIN TRANSACTION');
+            
+            // Видаляємо замовлення (order_items видаляться автоматично через ON DELETE CASCADE)
+            db.run('DELETE FROM orders WHERE id = ?', [id], function(err) {
+                if (err) {
+                    console.error('[orderQueries.delete] DB ERROR:', err);
+                    db.run('ROLLBACK');
+                    return reject(err);
+                }
+                
+                db.run('COMMIT');
+                resolve({ changes: this.changes });
+            });
+        });
     })
 };
 
@@ -860,6 +1068,301 @@ const planningQueries = {
     // Placeholder for planning queries
 };
 
+// Users queries
+const userQueries = {
+    getAll: () => new Promise((resolve, reject) => {
+        db.all(`
+            SELECT id, username, email, phone, role, permissions, active, 
+                   created_at, updated_at, first_login
+            FROM users 
+            ORDER BY username
+        `, (err, rows) => {
+            if (err) {
+                console.error('[userQueries.getAll] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve(rows);
+        });
+    }),
+
+    getById: (id) => new Promise((resolve, reject) => {
+        db.get(`
+            SELECT id, username, email, phone, password_hash, role, permissions, 
+                   active, created_at, updated_at, first_login, created_by
+            FROM users 
+            WHERE id = ?
+        `, [id], (err, row) => {
+            if (err) {
+                console.error('[userQueries.getById] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve(row);
+        });
+    }),
+
+    getByUsername: (username) => new Promise((resolve, reject) => {
+        db.get(`
+            SELECT id, username, email, phone, password_hash, role, permissions, 
+                   active, created_at, updated_at, first_login, created_by
+            FROM users 
+            WHERE username = ? AND active = 1
+        `, [username], (err, row) => {
+            if (err) {
+                console.error('[userQueries.getByUsername] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve(row);
+        });
+    }),
+
+    getByEmail: (email) => new Promise((resolve, reject) => {
+        db.get(`
+            SELECT id, username, email, phone, password_hash, role, permissions, 
+                   active, created_at, updated_at, first_login, created_by
+            FROM users 
+            WHERE email = ? AND active = 1
+        `, [email], (err, row) => {
+            if (err) {
+                console.error('[userQueries.getByEmail] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve(row);
+        });
+    }),
+
+    create: (userData) => new Promise((resolve, reject) => {
+        const { username, email, phone, password_hash, role, permissions, first_login, active, created_by } = userData;
+        db.run(`
+            INSERT INTO users (username, email, phone, password_hash, role, permissions, first_login, active, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [username, email, phone, password_hash, role, 
+            typeof permissions === 'string' ? permissions : JSON.stringify(permissions), 
+            first_login || 1, active || 1, created_by], function(err) {
+            if (err) {
+                console.error('[userQueries.create] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve(this.lastID);
+        });
+    }),
+
+    update: (id, userData) => new Promise((resolve, reject) => {
+        const fields = [];
+        const values = [];
+        
+        if (userData.username !== undefined) {
+            fields.push('username = ?');
+            values.push(userData.username);
+        }
+        if (userData.email !== undefined) {
+            fields.push('email = ?');
+            values.push(userData.email);
+        }
+        if (userData.phone !== undefined) {
+            fields.push('phone = ?');
+            values.push(userData.phone);
+        }
+        if (userData.role !== undefined) {
+            fields.push('role = ?');
+            values.push(userData.role);
+        }
+        if (userData.permissions !== undefined) {
+            fields.push('permissions = ?');
+            values.push(typeof userData.permissions === 'string' ? userData.permissions : JSON.stringify(userData.permissions));
+        }
+        if (userData.active !== undefined) {
+            fields.push('active = ?');
+            values.push(userData.active);
+        }
+        if (userData.password_hash !== undefined) {
+            fields.push('password_hash = ?');
+            values.push(userData.password_hash);
+        }
+        if (userData.first_login !== undefined) {
+            fields.push('first_login = ?');
+            values.push(userData.first_login);
+        }
+        
+        if (fields.length === 0) {
+            return resolve({ changes: 0 });
+        }
+        
+        fields.push('updated_at = CURRENT_TIMESTAMP');
+        values.push(id);
+        
+        const query = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
+        
+        db.run(query, values, function(err) {
+            if (err) {
+                console.error('[userQueries.update] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve({ changes: this.changes });
+        });
+    }),
+
+    updatePassword: (id, hashedPassword) => new Promise((resolve, reject) => {
+        db.run(`
+            UPDATE users 
+            SET password_hash = ?, first_login = 0, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `, [hashedPassword, id], function(err) {
+            if (err) {
+                console.error('[userQueries.updatePassword] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve({ changes: this.changes });
+        });
+    }),
+
+    deactivate: (id) => new Promise((resolve, reject) => {
+        db.run(`
+            UPDATE users 
+            SET active = 0, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `, [id], function(err) {
+            if (err) {
+                console.error('[userQueries.deactivate] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve({ changes: this.changes });
+        });
+    })
+};
+
+// Session queries
+const sessionQueries = {
+    getById: (sessionId) => new Promise((resolve, reject) => {
+        db.get(`
+            SELECT session_id, user_id, created_at, expires_at, 
+                   ip_address, user_agent, active
+            FROM user_sessions 
+            WHERE session_id = ? AND active = 1
+        `, [sessionId], (err, row) => {
+            if (err) {
+                console.error('[sessionQueries.getById] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve(row);
+        });
+    }),
+
+    create: (sessionData) => new Promise((resolve, reject) => {
+        const { session_id, user_id, expires_at, ip_address, user_agent } = sessionData;
+        db.run(`
+            INSERT INTO user_sessions (session_id, user_id, expires_at, ip_address, user_agent)
+            VALUES (?, ?, ?, ?, ?)
+        `, [session_id, user_id, expires_at, ip_address, user_agent], function(err) {
+            if (err) {
+                console.error('[sessionQueries.create] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve({ session_id, changes: this.changes });
+        });
+    }),
+
+    deactivate: (sessionId) => new Promise((resolve, reject) => {
+        db.run(`
+            UPDATE user_sessions 
+            SET active = 0 
+            WHERE session_id = ?
+        `, [sessionId], function(err) {
+            if (err) {
+                console.error('[sessionQueries.deactivate] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve({ changes: this.changes });
+        });
+    }),
+
+    cleanupExpired: () => new Promise((resolve, reject) => {
+        db.run(`
+            UPDATE user_sessions 
+            SET active = 0 
+            WHERE expires_at < datetime('now') AND active = 1
+        `, function(err) {
+            if (err) {
+                console.error('[sessionQueries.cleanupExpired] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve({ changes: this.changes });
+        });
+    }),
+
+    getByUserId: (userId) => new Promise((resolve, reject) => {
+        db.all(`
+            SELECT session_id, created_at, expires_at, ip_address, user_agent, active
+            FROM user_sessions 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC
+        `, [userId], (err, rows) => {
+            if (err) {
+                console.error('[sessionQueries.getByUserId] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve(rows);
+        });
+    })
+};
+
+// Audit queries
+const auditQueries = {
+    log: (auditData) => new Promise((resolve, reject) => {
+        const { user_id, action, resource_type, resource_id, details } = auditData;
+        db.run(`
+            INSERT INTO user_audit (user_id, action, resource_type, resource_id, details)
+            VALUES (?, ?, ?, ?, ?)
+        `, [user_id, action, resource_type, resource_id, details], function(err) {
+            if (err) {
+                console.error('[auditQueries.log] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve({ id: this.lastID, changes: this.changes });
+        });
+    }),
+
+    logUserAction: (userId, action, details) => new Promise((resolve, reject) => {
+        db.run(`
+            INSERT INTO user_audit (user_id, action, details, ip_address, user_agent)
+            VALUES (?, ?, ?, ?, ?)
+        `, [userId, action, JSON.stringify(details), details.ip_address, details.user_agent], function(err) {
+            if (err) {
+                console.error('[auditQueries.logUserAction] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve({ id: this.lastID, changes: this.changes });
+        });
+    }),
+
+    logSecurityEvent: (eventType, userId, details) => new Promise((resolve, reject) => {
+        db.run(`
+            INSERT INTO security_events (event_type, user_id, ip_address, details)
+            VALUES (?, ?, ?, ?)
+        `, [eventType, userId, details.ip_address, JSON.stringify(details)], function(err) {
+            if (err) {
+                console.error('[auditQueries.logSecurityEvent] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve({ id: this.lastID, changes: this.changes });
+        });
+    }),
+
+    logApiCall: (userId, method, path, statusCode, duration, success, details) => new Promise((resolve, reject) => {
+        db.run(`
+            INSERT INTO api_audit_log (user_id, method, path, ip_address, user_agent, 
+                                     status_code, duration, success)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [userId, method, path, details.ip_address, details.user_agent, 
+            statusCode, duration, success], function(err) {
+            if (err) {
+                console.error('[auditQueries.logApiCall] DB ERROR:', err);
+                return reject(err);
+            }
+            resolve({ id: this.lastID, changes: this.changes });
+        });
+    })
+};
+
 module.exports = {
     initDatabase,
     productQueries,
@@ -869,5 +1372,8 @@ module.exports = {
     orderQueries,
     movementsQueries,
     planningQueries,
+    userQueries,
+    sessionQueries,
+    auditQueries,
     db
 };

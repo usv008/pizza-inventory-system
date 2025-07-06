@@ -28,6 +28,11 @@ class OperationsLogController {
         // Приход
         ARRIVAL: 'ARRIVAL',
         
+        // Рухи товарів
+        MOVEMENT_CREATE: 'MOVEMENT_CREATE',
+        MOVEMENT_UPDATE: 'MOVEMENT_UPDATE',
+        MOVEMENT_DELETE: 'MOVEMENT_DELETE',
+        
         // Клієнти
         CREATE_CLIENT: 'CREATE_CLIENT',
         UPDATE_CLIENT: 'UPDATE_CLIENT',
@@ -311,13 +316,19 @@ class OperationsLogController {
 
     // Логування операції з товаром
     static async logProductOperation(operation_type, product, user_name, old_product = null, req = null) {
-        const description = this.generateProductDescription(operation_type, product, old_product);
+        // Для операції видалення product може бути null, використовуємо old_product
+        const targetProduct = product || old_product;
+        if (!targetProduct) {
+            throw new Error('Немає даних товару для логування');
+        }
+        
+        const description = this.generateProductDescription(operation_type, targetProduct, old_product);
         
         return this.logOperation({
             operation_type,
-            operation_id: product.id,
+            operation_id: targetProduct.id,
             entity_type: 'product',
-            entity_id: product.id,
+            entity_id: targetProduct.id,
             old_data: old_product,
             new_data: product,
             description,
@@ -358,6 +369,9 @@ class OperationsLogController {
             
             case this.OPERATION_TYPES.UPDATE_PRODUCT:
                 return `Оновлено товар "${product.name}" (${product.code})`;
+            
+            case this.OPERATION_TYPES.DELETE_PRODUCT:
+                return `Видалено товар "${product.name}" (${product.code})`;
             
             case this.OPERATION_TYPES.UPDATE_STOCK:
                 const diff = product.stock_pieces - (old_product?.stock_pieces || 0);

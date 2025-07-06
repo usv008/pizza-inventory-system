@@ -27,7 +27,10 @@ class OrderEditor {
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            this.availableProducts = await response.json();
+            const data = await response.json();
+            
+            // Обробляємо новий формат API: {success: true, data: [...]}
+            this.availableProducts = data.success ? data.data : data;
             console.log('Products loaded:', this.availableProducts.length);
         } catch (error) {
             console.error('Помилка завантаження товарів:', error);
@@ -45,8 +48,10 @@ class OrderEditor {
                 try {
                     const response = await fetch(`/api/products/${product.id}/batches`);
                     if (response.ok) {
-                        const batches = await response.json();
-                        const totalAvailable = batches.reduce((sum, b) => sum + b.available_quantity, 0);
+                        const batchData = await response.json();
+                        // Обробляємо новий формат API: {success: true, data: [...]}
+                        const batches = batchData.success ? batchData.data : batchData;
+                        const totalAvailable = batches.reduce((sum, b) => sum + (b.available_quantity || 0), 0);
                         this.productBatches[product.id] = {
                             total_available: totalAvailable,
                             batches: batches.filter(b => b.available_quantity > 0) // Тільки доступні партії
@@ -136,8 +141,9 @@ class OrderEditor {
             const data = await response.json();
             console.log('Data received:', data);
             
-            this.currentOrder = data.order;
-            this.availableProducts = data.products || this.availableProducts;
+            // Обробляємо новий формат API: {success: true, data: {order: {...}, products: [...]}}
+            this.currentOrder = data.success ? data.data.order : data.order;
+            this.availableProducts = data.success ? data.data.products : data.products || this.availableProducts;
             
             // Оновлюємо партії перед заповненням форми
             await this.loadProductBatches();

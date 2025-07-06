@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вхід - Pizza Inventory System</title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="stylesheet" href="/styles/main.css">
+    <link rel="stylesheet" href="/styles/forms.css">
+    <link rel="stylesheet" href="/styles/buttons.css">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            padding: 3rem;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .login-header {
+            margin-bottom: 2rem;
+        }
+        
+        .login-header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 0.5rem;
+        }
+        
+        .login-header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+        
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .form-group {
+            text-align: left;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #ecf0f1;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+        
+        .form-group select {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid #ecf0f1;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .login-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .error-message {
+            background: #fee;
+            color: #c0392b;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .success-message {
+            background: #eafaf1;
+            color: #27ae60;
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .loading {
+            display: none;
+            color: #7f8c8d;
+            margin-top: 1rem;
+        }
+        
+        .footer {
+            margin-top: 2rem;
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 2rem;
+                margin: 1rem;
+            }
+            
+            .login-header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>🍕</h1>
+            <h1>Pizza Inventory System</h1>
+            <p>Увійдіть в систему для продовження</p>
+        </div>
+        
+        <div id="error-message" class="error-message"></div>
+        <div id="success-message" class="success-message"></div>
+        
+        <form id="login-form" class="login-form">
+            <div class="form-group">
+                <label for="username">Користувач</label>
+                <select id="username" name="username" required>
+                    <option value="">Завантаження користувачів...</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Пароль</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block login-btn" id="login-btn">
+                🔐 Увійти
+            </button>
+            
+            <div id="loading" class="loading">
+                Вхід в систему...
+            </div>
+        </form>
+        
+        <div class="footer">
+          <!--  <p>За замовчуванням: admin / admin123456</p> -->
+        </div>
+    </div>
+
+    <script src="/js/error-handler.js"></script>
+    <script>
+        const API_URL = '/api';
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Перевіряємо чи користувач вже авторизований
+            checkExistingSession();
+            
+            // Завантажуємо список користувачів
+            loadUsers();
+            
+            // Обробка форми логіну
+            document.getElementById('login-form').addEventListener('submit', handleLogin);
+        });
+        
+        async function checkExistingSession() {
+            try {
+                const response = await fetch(`${API_URL}/auth/me`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const userData = await response.json();
+                    if (userData.success && userData.data) {
+                        // Користувач вже авторизований, перенаправляємо
+                        showSuccess('Ви вже авторизовані. Перенаправлення...');
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 1000);
+                    }
+                }
+            } catch (error) {
+                // Ігноруємо помилки перевірки сесії
+                console.log('No existing session found');
+            }
+        }
+        
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showError('Будь ласка, заповніть всі поля');
+                return;
+            }
+            
+            setLoading(true);
+            hideMessages();
+            
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showSuccess('Успішний вхід! Перенаправлення...');
+                    
+                    // Логуємо успішний вхід
+                    if (typeof logError === 'function') {
+                        logError(`Successful login for user: ${username}`, 'LOGIN_SUCCESS');
+                    }
+                    
+                    // Перенаправляємо на головну сторінку
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 1000);
+                    
+                } else {
+                    // Обробка помилок від сервера
+                    let errorMessage = 'Помилка входу';
+                    
+                    if (data.error) {
+                        switch (data.error.code) {
+                            case 'INVALID_CREDENTIALS':
+                                errorMessage = 'Неправильний логін або пароль';
+                                break;
+                            case 'USER_NOT_FOUND':
+                                errorMessage = 'Користувача не знайдено';
+                                break;
+                            case 'ACCOUNT_DISABLED':
+                                errorMessage = 'Акаунт заблоковано';
+                                break;
+                            default:
+                                errorMessage = data.error.message || 'Помилка входу';
+                        }
+                    }
+                    
+                    showError(errorMessage);
+                    
+                    // Логуємо помилку
+                    if (typeof logError === 'function') {
+                        logError(`Login failed for user: ${username}`, 'LOGIN_ERROR', data.error);
+                    }
+                }
+                
+            } catch (error) {
+                showError('Помилка з\'єднання з сервером');
+                
+                if (typeof logError === 'function') {
+                    logError('Login request failed', 'LOGIN_REQUEST_ERROR', error);
+                }
+            } finally {
+                setLoading(false);
+            }
+        }
+        
+        async function loadUsers() {
+            try {
+                const response = await fetch(`${API_URL}/auth/users`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.data) {
+                        populateUsersDropdown(data.data);
+                    } else {
+                        showError('Не вдалося завантажити список користувачів');
+                    }
+                } else {
+                    showError('Помилка завантаження користувачів');
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+                showError('Помилка з\'єднання при завантаженні користувачів');
+            }
+        }
+        
+        function populateUsersDropdown(users) {
+            const usernameSelect = document.getElementById('username');
+            
+            // Очищаємо попередні опції
+            usernameSelect.innerHTML = '';
+            
+            // Додаємо порожню опцію
+            const emptyOption = document.createElement('option');
+            emptyOption.value = '';
+            emptyOption.textContent = 'Оберіть користувача...';
+            usernameSelect.appendChild(emptyOption);
+            
+            // Фільтруємо тільки активних користувачів (клієнтська фільтрація як запасний варіант)
+            const activeUsers = users.filter(user => user.active === 1);
+            console.log(`Отримано ${users.length} користувачів, з них ${activeUsers.length} активних`);
+            
+            // Додаємо активних користувачів
+            activeUsers.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.username;
+                option.textContent = `${user.full_name || user.username} (${user.role})`;
+                usernameSelect.appendChild(option);
+            });
+            
+            // Автофокус на select
+            usernameSelect.focus();
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            
+            // Автоматично приховуємо через 5 секунд
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success-message');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+        }
+        
+        function hideMessages() {
+            document.getElementById('error-message').style.display = 'none';
+            document.getElementById('success-message').style.display = 'none';
+        }
+        
+        function setLoading(isLoading) {
+            const loginBtn = document.getElementById('login-btn');
+            const loadingDiv = document.getElementById('loading');
+            const form = document.getElementById('login-form');
+            
+            if (isLoading) {
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = '⏳ Вхід...';
+                loadingDiv.style.display = 'block';
+                form.style.opacity = '0.7';
+            } else {
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '🔐 Увійти';
+                loadingDiv.style.display = 'none';
+                form.style.opacity = '1';
+            }
+        }
+    </script>
+</body>
+</html> 

@@ -32,6 +32,7 @@
                     <option value="CREATE_ORDER">Створення замовлення</option>
                     <option value="UPDATE_ORDER">Редагування замовлення</option>
                     <option value="UPDATE_ORDER_STATUS">Зміна статусу</option>
+                    <option value="DELETE_ORDER">Видалення замовлення</option>
                     <option value="PRODUCTION">Виробництво</option>
                     <option value="WRITEOFF">Списання</option>
                     <option value="ARRIVAL">Приход</option>
@@ -205,6 +206,7 @@
 
     <!-- JavaScript -->
     <script src="js/error-handler.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/navigation.js"></script>
     <script>
         // Глобальні змінні
@@ -212,12 +214,16 @@
         let currentFilters = {};
 
         // Ініціалізація сторінки
-        document.addEventListener('DOMContentLoaded', function() {
-            setupEventListeners();
-            loadOperations();
-            
-            // Встановлюємо дату "до" на сьогодні
-            document.getElementById('dateToFilter').value = new Date().toISOString().split('T')[0];
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Перевіряємо аутентифікацію
+            const isAuthenticated = await authManager.requireAuth();
+            if (isAuthenticated) {
+                setupEventListeners();
+                loadOperations();
+                
+                // Встановлюємо дату "до" на сьогодні
+                document.getElementById('dateToFilter').value = new Date().toISOString().split('T')[0];
+            }
         });
 
         // Налаштування обробників подій

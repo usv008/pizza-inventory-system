@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управління користувачами - Pizza Inventory System</title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="stylesheet" href="/styles/main.css">
+    <link rel="stylesheet" href="/styles/forms.css">
+    <link rel="stylesheet" href="/styles/tables.css">
+    <link rel="stylesheet" href="/styles/buttons.css">
+    <link rel="stylesheet" href="/styles/modals-tabs.css">
+    <link rel="stylesheet" href="/styles/navigation.css">
+    
+    <style>
+        /* CSS змінні згідно з Pizza System Style Guide */
+        :root {
+            --primary: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --info: #17a2b8;
+            --secondary: #6c757d;
+            --surface: #ffffff;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --border: #e9ecef;
+            --shadow: rgba(0,0,0,0.1);
+            
+            /* Система відступів (8px базова одиниця) */
+            --spacing-xs: 0.25rem;
+            --spacing-sm: 0.5rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            
+            /* Радіуси закруглення */
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 8px;
+            --radius-xl: 12px;
+        }
+        
+        .users-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .users-header h1 {
+            color: #2c3e50;
+            margin: 0;
+        }
+        
+        .users-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        
+        .users-table-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+            overflow-x: auto;
+        }
+        
+        .table-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .table-header h2 {
+            margin: 0;
+        }
+        
+        .search-box {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .search-box input {
+            padding: 0.5rem 1rem;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 25px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            placeholder-color: rgba(255,255,255,0.7);
+        }
+        
+        .search-box input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .search-box input:focus {
+            outline: none;
+            border-color: rgba(255,255,255,0.6);
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            min-width: 1000px;
+        }
+        
+        .users-table th,
+        .users-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+            vertical-align: middle;
+        }
+        
+        .users-table th:last-child,
+        .users-table td:last-child {
+            width: 240px;
+            min-width: 240px;
+        }
+        
+        .users-table th:first-child,
+        .users-table td:first-child {
+            width: 160px;
+        }
+        
+        .users-table th:nth-child(2),
+        .users-table td:nth-child(2) {
+            width: 180px;
+        }
+        
+        .users-table th:nth-child(3),
+        .users-table td:nth-child(3) {
+            width: 110px;
+        }
+        
+        .users-table th:nth-child(4),
+        .users-table td:nth-child(4) {
+            width: 160px;
+        }
+        
+        .users-table th:nth-child(5),
+        .users-table td:nth-child(5) {
+            width: 90px;
+        }
+        
+        .users-table th:nth-child(6),
+        .users-table td:nth-child(6) {
+            width: 120px;
+        }
+        
+        .users-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .users-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .user-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+        
+        .user-status.active {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .user-status.inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .user-role {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: 500;
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+        
+        .user-actions {
+            display: flex;
+            gap: 1px;
+            align-items: center;
+            flex-wrap: wrap;
+            min-width: 220px;
+        }
+        
+        .user-actions .btn {
+            padding: 1px 4px;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 0.6rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 1px;
+            min-height: 24px;
+            text-decoration: none;
+            white-space: nowrap;
+            line-height: 1.1;
+        }
+        
+        .btn-edit {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-edit:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+        }
+        
+        .btn-delete {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-delete:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+        }
+        
+        .btn-toggle {
+            background: var(--warning);
+            color: white;
+        }
+        
+        .btn-toggle:hover {
+            background: #e67e22;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(243, 156, 18, 0.3);
+        }
+        
+        .btn-toggle.blocked {
+            background: var(--danger);
+            color: white;
+        }
+        
+        .btn-toggle.blocked:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+        }
+        
+        .btn-toggle.activate {
+            background: var(--success);
+            color: white;
+        }
+        
+        .btn-toggle.activate:hover {
+            background: #229954;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+        }
+        
+        .btn-toggle.blocked:disabled {
+            background: #dc3545;
+            color: white;
+            opacity: 0.8;
+            cursor: not-allowed;
+        }
+        
+        .btn-toggle.blocked:disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            display: none;
+        }
+        
+        .loading-spinner {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #7f8c8d;
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .users-header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .users-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .search-box {
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .search-box input {
+                width: 100%;
+            }
+            
+            .users-table {
+                font-size: 0.75em;
+                min-width: 800px;
+            }
+            
+            .users-table th,
+            .users-table td {
+                padding: 0.4rem;
+            }
+            
+            .users-table th:last-child,
+            .users-table td:last-child {
+                width: 200px;
+                min-width: 200px;
+            }
+            
+            .user-actions {
+                flex-direction: column;
+                min-width: auto;
+                gap: 1px;
+            }
+            
+            .user-actions .btn {
+                font-size: 0.55rem;
+                min-height: 22px;
+                padding: 1px 3px;
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="users-header">
+            <h1>👥 Управління користувачами</h1>
+                            <button class="btn btn-success" onclick="showCreateUserModal()">
+                    ➕ Додати користувача
+                </button>
+        </div>
+        
+        <div class="users-stats" id="users-stats">
+            <div class="stat-card">
+                <div class="stat-number" id="total-users">0</div>
+                <div class="stat-label">Всього користувачів</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="active-users">0</div>
+                <div class="stat-label">Активних</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="admin-users">0</div>
+                <div class="stat-label">Адміністраторів</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="total-roles">0</div>
+                <div class="stat-label">Ролей</div>
+            </div>
+        </div>
+        
+        <div class="users-table-container">
+            <div class="table-header">
+                <h2>Список користувачів</h2>
+                <div class="search-box">
+                    <input type="text" id="search-users" placeholder="Пошук користувачів..." onkeyup="filterUsers()">
+                    <button class="btn btn-secondary" onclick="refreshUsers()">🔄 Оновити</button>
+                </div>
+            </div>
+            
+            <div id="users-table-content">
+                <div class="loading">Завантаження користувачів...</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Модальне вікно для створення/редагування користувача -->
+    <div id="user-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Додати користувача</h2>
+                <span class="close" onclick="closeUserModal()">&times;</span>
+            </div>
+            
+            <form id="user-form">
+                <div class="form-group">
+                    <label for="username">Ім'я користувача *</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email">
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">Телефон</label>
+                    <input type="tel" id="phone" name="phone">
+                </div>
+                
+                <div class="form-group">
+                    <label for="role">Роль *</label>
+                    <select id="role" name="role" required>
+                        <option value="">Оберіть роль...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="password-group">
+                    <label for="password">Пароль *</label>
+                    <input type="password" id="password" name="password" required>
+                    <small>Мінімум 6 символів</small>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="active" name="active" checked>
+                        Активний користувач
+                    </label>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeUserModal()">❌ Скасувати</button>
+                    <button type="submit" class="btn btn-success" id="save-user-btn">💾 Зберегти</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Overlay для завантаження -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <div class="loading">Обробка запиту...</div>
+        </div>
+    </div>
+
+    <script src="/js/error-handler.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/navigation.js"></script>
+    
+    <script>
+        let currentUsers = [];
+        let availableRoles = [];
+        let editingUserId = null;
+        
+        // Завантажуємо список видалених користувачів з localStorage
+        let deletedUserIds = new Set();
+        try {
+            const saved = localStorage.getItem('deletedUserIds');
+            if (saved) {
+                deletedUserIds = new Set(JSON.parse(saved));
+            }
+        } catch (error) {
+            console.warn('Помилка завантаження списку видалених користувачів:', error);
+        }
+
+        const API_URL = '/api';
+        
+        // Функція для збереження списку видалених користувачів
+        function saveDeletedUserIds() {
+            try {
+                localStorage.setItem('deletedUserIds', JSON.stringify([...deletedUserIds]));
+            } catch (error) {
+                console.warn('Помилка збереження списку видалених користувачів:', error);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Ініціалізуємо authManager
+                await authManager.init();
+                
+                // Перевіряємо що користувач авторизований
+                const isAuth = await authManager.requireAuth();
+                if (!isAuth) {
+                    return;
+                }
+                
+                // Перевіряємо що користувач - директор
+                if (!authManager.isDirector()) {
+                    authManager.showAccessDenied();
+                    return;
+                }
+                
+                // Завантажуємо дані
+                await loadInitialData();
+                
+                // Ініціалізуємо навігацію
+                const navigation = new PizzaNavigation();
+                await navigation.init('/admin/users.html');
+            } catch (error) {
+                console.error('Помилка ініціалізації сторінки:', error);
+                showUserError('Помилка ініціалізації сторінки: ' + error.message);
+            }
+        });
+        
+        async function loadInitialData() {
+            try {
+                showLoading(true);
+                
+                // Завантажуємо користувачів, ролі та статистику паралельно
+                const [usersResponse, rolesResponse, statsResponse] = await Promise.all([
+                    fetch(`${API_URL}/users?include_inactive=true`, { credentials: 'include' }),
+                    fetch(`${API_URL}/users/roles`, { credentials: 'include' }),
+                    fetch(`${API_URL}/users/stats`, { credentials: 'include' })
+                ]);
+                
+                if (usersResponse.ok) {
+                    const usersData = await usersResponse.json();
+                    currentUsers = usersData.success ? usersData.data : [];
+                    displayUsers(currentUsers);
+                } else {
+                    throw new Error('Не вдалося завантажити список користувачів');
+                }
+                
+                if (rolesResponse.ok) {
+                    const rolesData = await rolesResponse.json();
+                    availableRoles = rolesData.success ? rolesData.data : [];
+                    populateRoleSelect();
+                } else {
+                    throw new Error('Не вдалося завантажити список ролей');
+                }
+                
+                if (statsResponse.ok) {
+                    const statsData = await statsResponse.json();
+                    if (statsData.success) {
+                        updateStats(statsData.data);
+                    }
+                } else {
+                    // Статистика не критична, рахуємо самостійно
+                    updateStatsFromUsers(currentUsers);
+                }
+                
+            } catch (error) {
+                logError('Failed to load initial data', 'DATA_LOAD_ERROR', error);
+                showUserError('Помилка завантаження даних: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function displayUsers(users) {
+            const container = document.getElementById('users-table-content');
+            
+            // Фільтруємо видалених користувачів
+            const visibleUsers = users.filter(user => !deletedUserIds.has(user.id));
+            
+            if (visibleUsers.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>👥 Користувачі не знайдені</h3>
+                        <p>Додайте першого користувача для початку роботи</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const tableHTML = `
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Користувач</th>
+                            <th>Email</th>
+                            <th>Телефон</th>
+                            <th>Роль</th>
+                            <th>Статус</th>
+                            <th>Створено</th>
+                            <th>Дії</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${visibleUsers.map(user => `
+                            <tr>
+                                <td>
+                                    <strong>${user.username}</strong>
+                                    ${user.id === 1 ? '<br><small>🔑 Системний адміністратор</small>' : ''}
+                                </td>
+                                <td>${user.email || '-'}</td>
+                                <td>${user.phone || '-'}</td>
+                                <td>
+                                    <span class="user-role">${getRoleLabel(user.role)}</span>
+                                </td>
+                                <td>
+                                    <span class="user-status ${user.active ? 'active' : 'inactive'}">
+                                        ${user.active ? 'Активний' : 'Неактивний'}
+                                    </span>
+                                </td>
+                                <td>${formatDate(user.created_at)}</td>
+                                <td>
+                                    <div class="user-actions">
+                                        <button class="btn btn-edit" onclick="editUser(${user.id})" title="Редагувати користувача">
+                                            ✏️ Редагувати
+                                        </button>
+                                        ${user.id !== 1 ? `
+                                            ${user.active ? `
+                                                <button class="btn btn-toggle" onclick="toggleUser(${user.id}, ${user.active})" title="Заблокувати користувача">
+                                                    🔒 Блокувати
+                                                </button>
+                                                <button class="btn btn-delete" onclick="deleteUser(${user.id})" title="Видалити користувача">
+                                                    🗑️ Видалити
+                                                </button>
+                                            ` : `
+                                                <button class="btn btn-toggle blocked" disabled title="Користувач заблокований">
+                                                    ❌ Заблоковано
+                                                </button>
+                                                <button class="btn btn-toggle activate" onclick="toggleUser(${user.id}, ${user.active})" title="Активувати користувача">
+                                                    ✅ Активувати
+                                                </button>
+                                                <button class="btn btn-delete" onclick="deleteUser(${user.id})" title="Видалити користувача">
+                                                    🗑️ Видалити
+                                                </button>
+                                            `}
+                                        ` : ''}
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = tableHTML;
+        }
+        
+        function populateRoleSelect() {
+            const roleSelect = document.getElementById('role');
+            roleSelect.innerHTML = '<option value="">Оберіть роль...</option>';
+            
+            availableRoles.forEach(role => {
+                const option = document.createElement('option');
+                option.value = role.value;
+                option.textContent = role.label;
+                roleSelect.appendChild(option);
+            });
+        }
+        
+        function updateStats(stats) {
+            document.getElementById('total-users').textContent = stats.total_users || 0;
+            document.getElementById('active-users').textContent = stats.active_users || 0;
+            document.getElementById('admin-users').textContent = stats.admin_users || 0;
+            document.getElementById('total-roles').textContent = availableRoles.length || 0;
+        }
+        
+        function updateStatsFromUsers(users) {
+            // Фільтруємо видалених користувачів для статистики
+            const visibleUsers = users.filter(user => !deletedUserIds.has(user.id));
+            
+            const totalUsers = visibleUsers.length;
+            const activeUsers = visibleUsers.filter(u => u.active).length;
+            const adminUsers = visibleUsers.filter(u => u.role === 'ДИРЕКТОР').length;
+            
+            document.getElementById('total-users').textContent = totalUsers;
+            document.getElementById('active-users').textContent = activeUsers;
+            document.getElementById('admin-users').textContent = adminUsers;
+            document.getElementById('total-roles').textContent = availableRoles.length;
+        }
+        
+        function getRoleLabel(role) {
+            const roleObj = availableRoles.find(r => r.value === role);
+            return roleObj ? roleObj.label : role;
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('uk-UA') + ' ' + date.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        function filterUsers() {
+            const searchTerm = document.getElementById('search-users').value.toLowerCase();
+            
+            // Спочатку фільтруємо видалених користувачів, потім застосовуємо пошук
+            const visibleUsers = currentUsers.filter(user => !deletedUserIds.has(user.id));
+            const filteredUsers = visibleUsers.filter(user => 
+                user.username.toLowerCase().includes(searchTerm) ||
+                (user.email && user.email.toLowerCase().includes(searchTerm)) ||
+                (user.phone && user.phone.toLowerCase().includes(searchTerm)) ||
+                getRoleLabel(user.role).toLowerCase().includes(searchTerm)
+            );
+            displayUsers(filteredUsers);
+        }
+        
+        async function refreshUsers() {
+            await loadInitialData();
+        }
+        
+        function showCreateUserModal() {
+            editingUserId = null;
+            document.getElementById('modal-title').textContent = 'Додати користувача';
+            document.getElementById('user-form').reset();
+            document.getElementById('password-group').style.display = 'block';
+            document.getElementById('password').required = true;
+            document.getElementById('active').checked = true;
+            document.getElementById('user-modal').style.display = 'block';
+        }
+        
+        function editUser(userId) {
+            const user = currentUsers.find(u => u.id === userId);
+            if (!user) return;
+            
+            editingUserId = userId;
+            document.getElementById('modal-title').textContent = 'Редагувати користувача';
+            document.getElementById('username').value = user.username;
+            document.getElementById('email').value = user.email || '';
+            document.getElementById('phone').value = user.phone || '';
+            document.getElementById('role').value = user.role;
+            document.getElementById('active').checked = user.active;
+            document.getElementById('password-group').style.display = 'none';
+            document.getElementById('password').required = false;
+            document.getElementById('user-modal').style.display = 'block';
+        }
+        
+        function closeUserModal() {
+            document.getElementById('user-modal').style.display = 'none';
+            editingUserId = null;
+        }
+        
+        async function toggleUser(userId, currentStatus) {
+            if (userId === 1) {
+                showUserError('Неможливо змінити статус системного адміністратора');
+                return;
+            }
+            
+            const action = currentStatus ? 'деактивувати' : 'активувати';
+            if (!confirm(`Ви дійсно хочете ${action} цього користувача?`)) {
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                
+                const response = await fetch(`${API_URL}/users/${userId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ active: !currentStatus })
+                });
+                
+                let data;
+                try {
+                    data = await response.json();
+                } catch (jsonError) {
+                    throw new Error(`Помилка обробки відповіді сервера (${response.status}): ${jsonError.message}`);
+                }
+                
+                if (response.ok && data.success) {
+                    await refreshUsers();
+                    showUserError(`Користувача успішно ${currentStatus ? 'деактивовано' : 'активовано'}`, 'success');
+                } else {
+                    throw new Error(data.error?.message || `Помилка зміни статусу (${response.status})`);
+                }
+                
+            } catch (error) {
+                logError('Failed to toggle user status', 'USER_TOGGLE_ERROR', error);
+                showUserError('Помилка зміни статусу: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function deleteUser(userId) {
+            if (userId === 1) {
+                showUserError('Неможливо видалити системного адміністратора');
+                return;
+            }
+            
+            if (!confirm('Ви дійсно хочете видалити цього користувача? Цю дію неможливо скасувати.')) {
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                
+                const response = await fetch(`${API_URL}/users/${userId}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                
+                let data;
+                try {
+                    data = await response.json();
+                } catch (jsonError) {
+                    throw new Error(`Помилка обробки відповіді сервера (${response.status}): ${jsonError.message}`);
+                }
+                
+                if (response.ok && data.success) {
+                    // Додаємо користувача до списку видалених
+                    deletedUserIds.add(userId);
+                    saveDeletedUserIds();
+                    await refreshUsers();
+                    showUserError('Користувача успішно видалено', 'success');
+                } else {
+                    throw new Error(data.error?.message || `Помилка видалення (${response.status})`);
+                }
+                
+            } catch (error) {
+                logError('Failed to delete user', 'USER_DELETE_ERROR', error);
+                showUserError('Помилка видалення: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Обробка форми користувача
+        document.getElementById('user-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const userData = {
+                username: formData.get('username'),
+                email: formData.get('email') || null,
+                phone: formData.get('phone') || null,
+                role: formData.get('role'),
+                active: formData.get('active') === 'on'
+            };
+            
+            if (!editingUserId) {
+                userData.password = formData.get('password');
+            }
+            
+            try {
+                showLoading(true);
+                
+                const url = editingUserId ? `${API_URL}/users/${editingUserId}` : `${API_URL}/users`;
+                const method = editingUserId ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(userData)
+                });
+                
+                let data;
+                try {
+                    data = await response.json();
+                } catch (jsonError) {
+                    throw new Error(`Помилка обробки відповіді сервера (${response.status}): ${jsonError.message}`);
+                }
+                
+                if (response.ok && data.success) {
+                    closeUserModal();
+                    await refreshUsers();
+                    showUserError(editingUserId ? 'Користувача успішно оновлено' : 'Користувача успішно створено', 'success');
+                } else {
+                    throw new Error(data.error?.message || `Помилка збереження (${response.status})`);
+                }
+                
+            } catch (error) {
+                logError('Failed to save user', 'USER_SAVE_ERROR', error);
+                showUserError('Помилка збереження: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        });
+        
+        function showUserError(message, type = 'error') {
+            // Створюємо або знаходимо контейнер для повідомлень
+            let errorContainer = document.getElementById('user-error-container');
+            if (!errorContainer) {
+                errorContainer = document.createElement('div');
+                errorContainer.id = 'user-error-container';
+                errorContainer.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 10000;
+                    max-width: 400px;
+                `;
+                document.body.appendChild(errorContainer);
+            }
+            
+            // Створюємо повідомлення
+            const errorDiv = document.createElement('div');
+            errorDiv.style.cssText = `
+                padding: 15px 20px;
+                margin-bottom: 10px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                animation: slideIn 0.3s ease-out;
+                background: ${type === 'success' ? '#27ae60' : '#e74c3c'};
+            `;
+            errorDiv.textContent = message;
+            
+            // Додаємо анімацію
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+            `;
+            if (!document.head.querySelector('style[data-user-error]')) {
+                style.setAttribute('data-user-error', 'true');
+                document.head.appendChild(style);
+            }
+            
+            errorContainer.appendChild(errorDiv);
+            
+            // Автоматично видаляємо через 5 секунд
+            setTimeout(() => {
+                if (errorDiv.parentNode) {
+                    errorDiv.remove();
+                }
+            }, 5000);
+        }
+        
+        function logError(message, code, error) {
+            console.error(`[${code}] ${message}:`, error);
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                timestamp: new Date().toISOString()
+            });
+            // Можна додати відправку на сервер для логування
+        }
+        
+        function showLoading(show) {
+            document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+        }
+        
+        // Закриття модального вікна при кліку поза ним
+        window.onclick = function(event) {
+            const modal = document.getElementById('user-modal');
+            if (event.target === modal) {
+                closeUserModal();
+            }
+        }
+    </script>
+</body>
+</html> 

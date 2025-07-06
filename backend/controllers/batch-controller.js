@@ -624,6 +624,30 @@ class BatchController {
                                         return res.status(500).json({ error: 'Помилка оновлення загальних залишків' });
                                     }
                                     
+                                    // 5. Логуємо операцію списання
+                                    OperationsLogController.logOperation({
+                                        operation_type: 'WRITEOFF',
+                                        entity_type: 'batch',
+                                        entity_id: batchId,
+                                        old_data: {
+                                            batch_id: batchId,
+                                            batch_date: batch.batch_date,
+                                            available_quantity_before: batch.available_quantity
+                                        },
+                                        new_data: {
+                                            batch_id: batchId,
+                                            batch_date: batch.batch_date,
+                                            quantity_written_off: quantity,
+                                            available_quantity_after: batch.available_quantity - quantity,
+                                            reason: reason,
+                                            responsible: responsible
+                                        },
+                                        description: `Списання партії ${batch.batch_date}: ${quantity} шт (${reason})`,
+                                        user_name: responsible,
+                                        ip_address: req?.ip || 'unknown',
+                                        user_agent: req?.get('User-Agent') || 'unknown'
+                                    });
+                                    
                                     db.run('COMMIT');
                                     res.json({ 
                                         message: 'Партію успішно списано',
