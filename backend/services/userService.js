@@ -401,9 +401,10 @@ class UserService {
             const allUsers = await this.userQueries.getAll();
             
             const stats = {
-                total: allUsers.length,
-                active: allUsers.filter(u => u.active === 1).length,
-                inactive: allUsers.filter(u => u.active === 0).length,
+                total_users: allUsers.length,
+                active_users: allUsers.filter(u => u.active === 1).length,
+                inactive_users: allUsers.filter(u => u.active === 0).length,
+                admin_users: allUsers.filter(u => u.role === 'ДИРЕКТОР' && u.active === 1).length,
                 first_login_pending: allUsers.filter(u => u.first_login === 1).length,
                 by_role: {}
             };
