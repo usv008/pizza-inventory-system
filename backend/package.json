@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "app-new.js",
   "dependencies": {
+    "@supabase/supabase-js": "^2.50.4",
     "abbrev": "^1.1.1",
     "accepts": "^2.0.0",
     "agent-base": "^6.0.2",
@@ -41,7 +42,7 @@
     "depd": "^2.0.0",
     "detect-libc": "^2.0.4",
     "docxtemplater": "^3.65.0",
-    "dotenv": "^16.5.0",
+    "dotenv": "^16.6.1",
     "dunder-proto": "^1.0.1",
     "ee-first": "^1.1.1",
     "emoji-regex": "^8.0.0",
