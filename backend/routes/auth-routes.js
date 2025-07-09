@@ -5,8 +5,10 @@ const router = express.Router();
 const { handleAsync } = require('../middleware/responseFormatter');
 const { ValidationError, NotFoundError } = require('../middleware/errors/AppError');
 
-// Service
-const authService = require('../services/authService');
+// Service - використовуємо Supabase версію
+const SupabaseAuthService = require('../services/supabaseAuthService');
+const authService = new SupabaseAuthService();
+authService.initialize();
 
 /**
  * @api {get} /api/auth/users Get all users for dropdown

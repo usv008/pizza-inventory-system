@@ -1,0 +1,28 @@
+{
+  "export_date": "2025-07-07T14:13:49.993Z",
+  "total_tables": 19,
+  "total_records": 681,
+  "tables": {
+    "users": 14,
+    "products": 15,
+    "clients": 10,
+    "production_settings": 1,
+    "orders": 30,
+    "order_items": 74,
+    "production": 46,
+    "production_batches": 44,
+    "stock_movements": 113,
+    "writeoffs": 50,
+    "arrivals": 7,
+    "arrivals_items": 8,
+    "production_plans": 3,
+    "production_plan_items": 6,
+    "operations_log": 87,
+    "user_sessions": 0,
+    "user_audit": 95,
+    "api_audit_log": 0,
+    "security_events": 78
+  },
+  "sqlite_database": "/var/www/pizza-system/backend/pizza_inventory.db",
+  "export_directory": "/var/www/pizza-system/backend/supabase/exports"
+}

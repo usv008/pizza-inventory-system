@@ -9,8 +9,17 @@ const { ValidationError, NotFoundError } = require('../middleware/errors/AppErro
 const { validateOrder, validateOrderId, validateOrderStatus, validateOrderUpdate } = require('../validators/orderValidator');
 
 // Service
-const orderService = require('../services/orderService');
+const SupabaseOrderService = require("../services/supabaseOrderService");
+const orderService = SupabaseOrderService;
 
+
+// Ініціалізуємо сервіс
+try {
+    const OperationsLogController = require("../controllers/operations-log-controller");
+    orderService.initialize({ OperationsLogController });
+} catch (error) {
+    console.log("⚠️ OperationsLogController не знайдено для order-routes");
+}
 /**
  * @api {get} /api/orders Get all orders
  * @apiDescription Отримати список всіх замовлень з можливістю фільтрації

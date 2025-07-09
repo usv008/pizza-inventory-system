@@ -1,0 +1,11 @@
+[
+  {
+    "id": 1,
+    "daily_capacity": 500,
+    "working_hours": 8,
+    "min_batch_size": 10,
+    "cost_per_unit": 15.5,
+    "settings_json": null,
+    "updated_at": "2025-06-20T08:44:19.000Z"
+  }
+]

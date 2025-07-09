@@ -1,0 +1,74 @@
+[
+  {
+    "id": 1,
+    "arrival_id": 1,
+    "product_id": 366,
+    "quantity": 10,
+    "batch_date": "2025-06-10T00:00:00.000Z",
+    "notes": "тест",
+    "created_at": "2025-06-25T14:43:08.000Z"
+  },
+  {
+    "id": 2,
+    "arrival_id": 2,
+    "product_id": 5,
+    "quantity": 5,
+    "batch_date": "2025-06-18T00:00:00.000Z",
+    "notes": "",
+    "created_at": "2025-06-25T14:43:56.000Z"
+  },
+  {
+    "id": 3,
+    "arrival_id": 3,
+    "product_id": 1,
+    "quantity": 1,
+    "batch_date": "2025-06-17T00:00:00.000Z",
+    "notes": "тест",
+    "created_at": "2025-06-25T14:55:31.000Z"
+  },
+  {
+    "id": 4,
+    "arrival_id": 3,
+    "product_id": 5,
+    "quantity": 2,
+    "batch_date": "2025-06-19T00:00:00.000Z",
+    "notes": "",
+    "created_at": "2025-06-25T14:55:31.000Z"
+  },
+  {
+    "id": 5,
+    "arrival_id": 4,
+    "product_id": 1,
+    "quantity": 10,
+    "batch_date": "2025-06-17T00:00:00.000Z",
+    "notes": "тест",
+    "created_at": "2025-06-25T15:03:53.000Z"
+  },
+  {
+    "id": 6,
+    "arrival_id": 5,
+    "product_id": 5,
+    "quantity": 12,
+    "batch_date": "2025-06-12T00:00:00.000Z",
+    "notes": "",
+    "created_at": "2025-06-26T14:13:58.000Z"
+  },
+  {
+    "id": 7,
+    "arrival_id": 6,
+    "product_id": 1,
+    "quantity": 1,
+    "batch_date": "2025-07-01T00:00:00.000Z",
+    "notes": "",
+    "created_at": "2025-07-04T09:41:23.000Z"
+  },
+  {
+    "id": 8,
+    "arrival_id": 7,
+    "product_id": 2796,
+    "quantity": 10,
+    "batch_date": "2025-07-01T00:00:00.000Z",
+    "notes": "",
+    "created_at": "2025-07-06T18:12:27.000Z"
+  }
+]

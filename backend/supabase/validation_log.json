@@ -1,0 +1,2777 @@
+{
+  "start_time": "2025-07-07T14:13:49.847Z",
+  "tables": {
+    "products": {
+      "sqlite_count": 15,
+      "supabase_count": 15,
+      "count_match": true,
+      "sample_data_validation": {
+        "samples_checked": 10,
+        "perfect_matches": 0,
+        "records_with_differences": 10,
+        "differences": [
+          {
+            "record_id": 1,
+            "differences": [
+              {
+                "field": "code",
+                "sqlite_value": "ОП30ЧС"
+              },
+              {
+                "field": "weight",
+                "sqlite_value": 400
+              },
+              {
+                "field": "barcode",
+                "sqlite_value": "4820281160073"
+              },
+              {
+                "field": "pieces_per_box",
+                "sqlite_value": 9
+              },
+              {
+                "field": "stock_pieces",
+                "sqlite_value": 0
+              },
+              {
+                "field": "stock_boxes",
+                "sqlite_value": -9
+              },
+              {
+                "field": "min_stock_pieces",
+                "sqlite_value": 100
+              }
+            ]
+          },
+          {
+            "record_id": 2,
+            "differences": [
+              {
+                "field": "code",
+                "sqlite_value": "П30"
+              },
+              {
+                "field": "weight",
+                "sqlite_value": 380
+              },
+              {
+                "field": "barcode",
+                "sqlite_value": "4820000001241"
+              },
+              {
+                "field": "pieces_per_box",
+                "sqlite_value": 10
+              },
+              {
+                "field": "stock_pieces",
+                "sqlite_value": 0
+              },
+              {
+                "field": "stock_boxes",
+                "sqlite_value": 0
+              },
+              {
+                "field": "min_stock_pieces",
+                "sqlite_value": 100
+              }
+            ]
+          },
+          {
+            "record_id": 4,
+            "differences": [
+              {
+                "field": "code",
+                "sqlite_value": "4С30"
+              },
+              {
+                "field": "weight",
+                "sqlite_value": 510
+              },
+              {
+                "field": "barcode",
+                "sqlite_value": "4820281160080"
+              },
+              {
+                "field": "pieces_per_box",
+                "sqlite_value": 8
+              },
+              {
+                "field": "stock_pieces",
+                "sqlite_value": 0
+              },
+              {
+                "field": "stock_boxes",
+                "sqlite_value": 0
+              },
+              {
+                "field": "min_stock_pieces",
+                "sqlite_value": 100
+              }
+            ]
+          },
+          {
+            "record_id": 5,
+            "differences": [
+              {
+                "field": "code",
+                "sqlite_value": "4СГ30"
+              },
+              {
+                "field": "weight",
+                "sqlite_value": 490
+              },
+              {
+                "field": "pieces_per_box",
+                "sqlite_value": 10
+              },
+              {
+                "field": "stock_pieces",
+                "sqlite_value": 0
+              },
+              {
+                "field": "stock_boxes",
+                "sqlite_value": -2
+              },
+              {
+                "field": "min_stock_pieces",
+                "sqlite_value": 100
+              }
+            ]
+          },
+          {
+            "record_id": 366,
+            "differences": [
+              {
+                "field": "code",
+                "sqlite_value": "ПС30"
+              },
+              {
+                "field": "weight",
+                "sqlite_value": 480
+              },
+              {
+                "field": "barcode",
+                "sqlite_value": "4820281160110"
+              },
+              {
+                "field": "pieces_per_box",
+                "sqlite_value": 8
+              },
+              {
+                "field": "stock_pieces",
+                "sqlite_value": 0
+              },
+              {
+                "field": "stock_boxes",
+                "sqlite_value": -1
+              },
+              {
+                "field": "min_stock_pieces",
+                "sqlite_value": 100
+              }
+            ]
+          },
+          {
+            "record_id": 367,
+            "differences": [
+              {
+                "field": "code",
+                "sqlite_value": "ХС225"
+              },
+              {
+                "field": "weight",
+                "sqlite_value": 225
+              },
+              {
+                "field": "barcode",
+                "sqlite_value": "4820281160127"
+              },
+              {
+                "field": "pieces_per_box",
+                "sqlite_value": 12
+              },
+              {
+                "field": "stock_pieces",
+                "sqlite_value": 0
+              },
+              {
+                "field": "stock_boxes",
+                "sqlite_value": 0
+              },
+              {
+                "field": "min_stock_pieces",
+                "sqlite_value": 100
+              }
+            ]
+          },
+          {
+            "record_id": 368,
+            "differences": [
+              {
+                "field": "code",
+                "sqlite_value": "ФЛ30"
+              },
+              {
+                "field": "weight",
+                "sqlite_value": 550
+              },
+              {
+                "field": "pieces_per_box",
+                "sqlite_value": 10
+              },
+              {
+                "field": "stock_pieces",
+                "sqlite_value": 0
+              },
+              {
+                "field": "stock_boxes",
+                "sqlite_value": 0
+              },
+              {
+                "field": "min_stock_pieces",
+                "sqlite_value": 100
+              }
+            ]
+          },
+          {
+            "record_id": 1328,
+            "differences": [
+              {
+                "field": "code",
+                "sqlite_value": "ГГ30"
+              },
+              {
+                "field": "weight",
+                "sqlite_value": 500
+              },
+              {
+                "field": "barcode",
+                "sqlite_value": "4820281160134"
+              },
+              {
+                "field": "pieces_per_box",
+                "sqlite_value": 8
+              },
+              {
+                "field": "stock_pieces",
+                "sqlite_value": 0
+              },
+              {
+                "field": "stock_boxes",
+                "sqlite_value": 0
+              },
+              {
+                "field": "min_stock_pieces",
+                "sqlite_value": 100
+              }
+            ]
+          },
+          {
+            "record_id": 2796,
+            "differences": [
+              {
+                "field": "code",
+                "sqlite_value": "ОП30БС"
+              },
+              {
+                "field": "weight",
+                "sqlite_value": 400
+              },
+              {
+                "field": "pieces_per_box",
+                "sqlite_value": 10
+              },
+              {
+                "field": "stock_pieces",
+                "sqlite_value": 110
+              },
+              {
+                "field": "stock_boxes",
+                "sqlite_value": 0
+              },
+              {
+                "field": "min_stock_pieces",
+                "sqlite_value": 50
+              }
+            ]
+          },
+          {
+            "record_id": 2797,
+            "differences": [
+              {
+                "field": "code",
+                "sqlite_value": "КП30"
+              },
+              {
+                "field": "weight",
+                "sqlite_value": 19.9
+              },
+              {
+                "field": "pieces_per_box",
+                "sqlite_value": 100
+              },
+              {
+                "field": "stock_pieces",
+                "sqlite_value": 0
+              },
+              {
+                "field": "stock_boxes",
+                "sqlite_value": 0
+              },
+              {
+                "field": "min_stock_pieces",
+                "sqlite_value": 100
+              }
+            ]
+          }
+        ]
+      },
+      "status": "count_match_data_issues",
+      "error": null
+    },
+    "clients": {
+      "sqlite_count": 10,
+      "supabase_count": 10,
+      "count_match": true,
+      "sample_data_validation": {
+        "samples_checked": 10,
+        "perfect_matches": 10,
+        "records_with_differences": 0,
+        "differences": []
+      },
+      "status": "perfect",
+      "error": null
+    },
+    "production_settings": {
+      "sqlite_count": 1,
+      "supabase_count": 0,
+      "count_match": false,
+      "sample_data_validation": {
+        "samples_checked": 0,
+        "perfect_matches": 0,
+        "records_with_differences": 0,
+        "differences": []
+      },
+      "status": "data_match_count_mismatch",
+      "error": null
+    },
+    "orders": {
+      "sqlite_count": 30,
+      "supabase_count": 30,
+      "count_match": true,
+      "sample_data_validation": {
+        "samples_checked": 10,
+        "perfect_matches": 0,
+        "records_with_differences": 10,
+        "differences": [
+          {
+            "record_id": 1,
+            "differences": [
+              {
+                "field": "client_name",
+                "sqlite_value": "ТОВ \"Софія Торг\""
+              },
+              {
+                "field": "client_contact",
+                "sqlite_value": "Контакт: Андрій Саєнко\nТел: +380967542295\nEmail: saienko.a.a.ua@gmail.com\nАдреса: м. Київ, вул. Сновська 20"
+              },
+              {
+                "field": "order_date",
+                "sqlite_value": "2025-06-19T00:00:00.000Z"
+              },
+              {
+                "field": "delivery_date",
+                "sqlite_value": "2025-06-24T00:00:00.000Z"
+              },
+              {
+                "field": "status",
+                "sqlite_value": "NEW",
+                "supabase_value": "pending"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 1200
+              },
+              {
+                "field": "total_boxes",
+                "sqlite_value": 120
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "Усатий С.",
+                "supabase_value": null
+              }
+            ]
+          },
+          {
+            "record_id": 2,
+            "differences": [
+              {
+                "field": "client_name",
+                "sqlite_value": "Кафе Чао Белла"
+              },
+              {
+                "field": "client_contact",
+                "sqlite_value": "Контакт: Олександр Сидоренко\nТел: +380 93 456 78 90\nEmail: alex@ciao.com\nАдреса: м. Одеса, вул. Дерибасівська, 10"
+              },
+              {
+                "field": "order_date",
+                "sqlite_value": "2025-06-19T00:00:00.000Z"
+              },
+              {
+                "field": "delivery_date",
+                "sqlite_value": "2025-06-20T00:00:00.000Z"
+              },
+              {
+                "field": "status",
+                "sqlite_value": "NEW",
+                "supabase_value": "pending"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 323
+              },
+              {
+                "field": "total_boxes",
+                "sqlite_value": 32
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "Усатий",
+                "supabase_value": null
+              }
+            ]
+          },
+          {
+            "record_id": 3,
+            "differences": [
+              {
+                "field": "client_name",
+                "sqlite_value": "ТОВ \"Софія Торг\""
+              },
+              {
+                "field": "client_contact",
+                "sqlite_value": "Контакт: Андрій Саєнко\nТел: +380967542295\nEmail: saienko.a.a.ua@gmail.com\nАдреса: м. Київ, вул. Сновська 20"
+              },
+              {
+                "field": "order_date",
+                "sqlite_value": "2025-06-20T00:00:00.000Z"
+              },
+              {
+                "field": "delivery_date",
+                "sqlite_value": "2025-06-25T00:00:00.000Z"
+              },
+              {
+                "field": "status",
+                "sqlite_value": "NEW",
+                "supabase_value": "pending"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 750
+              },
+              {
+                "field": "total_boxes",
+                "sqlite_value": 89
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "Усатий Сергій ",
+                "supabase_value": null
+              }
+            ]
+          },
+          {
+            "record_id": 4,
+            "differences": [
+              {
+                "field": "client_name",
+                "sqlite_value": "ТОВ \"Софія Торг\""
+              },
+              {
+                "field": "client_contact",
+                "sqlite_value": "Контакт: Андрій Саєнко\nТел: +380967542295\nEmail: saienko.a.a.ua@gmail.com\nАдреса: м. Київ, вул. Сновська 20"
+              },
+              {
+                "field": "order_date",
+                "sqlite_value": "2025-06-20T00:00:00.000Z"
+              },
+              {
+                "field": "delivery_date",
+                "sqlite_value": "2025-06-25T00:00:00.000Z"
+              },
+              {
+                "field": "status",
+                "sqlite_value": "NEW",
+                "supabase_value": "pending"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 300
+              },
+              {
+                "field": "total_boxes",
+                "sqlite_value": 37
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "Усатий Сергій ",
+                "supabase_value": null
+              }
+            ]
+          },
+          {
+            "record_id": 5,
+            "differences": [
+              {
+                "field": "client_name",
+                "sqlite_value": "Ресторан Мамма Міа"
+              },
+              {
+                "field": "client_contact",
+                "sqlite_value": "Контакт: Марія Іваненко\nТел: +380 50 987 65 43\nEmail: maria@mamma.com\nАдреса: м. Львів, пл. Ринок, 5"
+              },
+              {
+                "field": "order_date",
+                "sqlite_value": "2025-06-20T00:00:00.000Z"
+              },
+              {
+                "field": "delivery_date",
+                "sqlite_value": "2025-06-23T00:00:00.000Z"
+              },
+              {
+                "field": "status",
+                "sqlite_value": "NEW",
+                "supabase_value": "pending"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 500
+              },
+              {
+                "field": "total_boxes",
+                "sqlite_value": 58
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "Усатий С.",
+                "supabase_value": null
+              }
+            ]
+          },
+          {
+            "record_id": 6,
+            "differences": [
+              {
+                "field": "client_name",
+                "sqlite_value": "\n                Кафе Чао Белла\n            "
+              },
+              {
+                "field": "client_contact",
+                "sqlite_value": ""
+              },
+              {
+                "field": "order_date",
+                "sqlite_value": "2025-06-22T00:00:00.000Z"
+              },
+              {
+                "field": "delivery_date",
+                "sqlite_value": "2025-06-25T00:00:00.000Z"
+              },
+              {
+                "field": "status",
+                "sqlite_value": "NEW",
+                "supabase_value": "pending"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 90
+              },
+              {
+                "field": "total_boxes",
+                "sqlite_value": 9
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "Усатий",
+                "supabase_value": null
+              }
+            ]
+          },
+          {
+            "record_id": 7,
+            "differences": [
+              {
+                "field": "client_name",
+                "sqlite_value": "\n                ТОВ Сокар\n            "
+              },
+              {
+                "field": "client_contact",
+                "sqlite_value": "Контакт: Олена Сліпченко\nТел: +380660658539\nEmail: calculation@rutmart.com.ua\nАдреса: м. Київ"
+              },
+              {
+                "field": "order_date",
+                "sqlite_value": "2025-06-23T00:00:00.000Z"
+              },
+              {
+                "field": "delivery_date",
+                "sqlite_value": "2025-07-03T00:00:00.000Z"
+              },
+              {
+                "field": "status",
+                "sqlite_value": "IN_PRODUCTION",
+                "supabase_value": "in_progress"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 415
+              },
+              {
+                "field": "total_boxes",
+                "sqlite_value": 49
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "Поточний користувач",
+                "supabase_value": null
+              }
+            ]
+          },
+          {
+            "record_id": 8,
+            "differences": [
+              {
+                "field": "client_name",
+                "sqlite_value": "\n                ТОВ \"АНДІ ЛТД\" (Neftek)\n            "
+              },
+              {
+                "field": "client_contact",
+                "sqlite_value": "Контакт: Алексей Сницеренко\nТел: +380975421836\nАдреса: м. Дныпро"
+              },
+              {
+                "field": "order_date",
+                "sqlite_value": "2025-06-24T00:00:00.000Z"
+              },
+              {
+                "field": "delivery_date",
+                "sqlite_value": "2025-06-25T00:00:00.000Z"
+              },
+              {
+                "field": "status",
+                "sqlite_value": "NEW",
+                "supabase_value": "pending"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "total_boxes",
+                "sqlite_value": 0
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "Усатий С.",
+                "supabase_value": null
+              }
+            ]
+          },
+          {
+            "record_id": 9,
+            "differences": [
+              {
+                "field": "client_name",
+                "sqlite_value": "\n                ТОВ \"НОРДГАЗ\", \n            "
+              },
+              {
+                "field": "client_contact",
+                "sqlite_value": "Контакт: Олена Михайлівна\nТел: +380972323024\nАдреса: Азк Лексус, Запорізьке шосе, 26"
+              },
+              {
+                "field": "order_date",
+                "sqlite_value": "2025-06-24T00:00:00.000Z"
+              },
+              {
+                "field": "delivery_date",
+                "sqlite_value": "2025-06-27T00:00:00.000Z"
+              },
+              {
+                "field": "status",
+                "sqlite_value": "NEW",
+                "supabase_value": "pending"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "total_boxes",
+                "sqlite_value": 0
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "Усатий С.",
+                "supabase_value": null
+              }
+            ]
+          },
+          {
+            "record_id": 10,
+            "differences": [
+              {
+                "field": "client_name",
+                "sqlite_value": "\n                ТОВ Сокар\n            "
+              },
+              {
+                "field": "client_contact",
+                "sqlite_value": "Контакт: Олена Сліпченко\nТел: +380660658539\nEmail: calculation@rutmart.com.ua\nАдреса: м. Київ"
+              },
+              {
+                "field": "order_date",
+                "sqlite_value": "2025-06-23T00:00:00.000Z"
+              },
+              {
+                "field": "delivery_date",
+                "sqlite_value": "2025-07-02T00:00:00.000Z"
+              },
+              {
+                "field": "status",
+                "sqlite_value": "NEW",
+                "supabase_value": "pending"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "total_boxes",
+                "sqlite_value": 0
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "Усатий С.",
+                "supabase_value": null
+              }
+            ]
+          }
+        ]
+      },
+      "status": "count_match_data_issues",
+      "error": null
+    },
+    "order_items": {
+      "sqlite_count": 74,
+      "supabase_count": 67,
+      "count_match": false,
+      "sample_data_validation": {
+        "samples_checked": 10,
+        "perfect_matches": 0,
+        "records_with_differences": 10,
+        "differences": [
+          {
+            "record_id": 1,
+            "differences": [
+              {
+                "field": "boxes",
+                "sqlite_value": 20
+              },
+              {
+                "field": "pieces",
+                "sqlite_value": 0
+              },
+              {
+                "field": "reserved_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "produced_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "created_at",
+                "sqlite_value": "2025-06-19T11:45:50.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 2,
+            "differences": [
+              {
+                "field": "boxes",
+                "sqlite_value": 100
+              },
+              {
+                "field": "pieces",
+                "sqlite_value": 0
+              },
+              {
+                "field": "reserved_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "produced_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "created_at",
+                "sqlite_value": "2025-06-19T11:45:50.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 3,
+            "differences": [
+              {
+                "field": "boxes",
+                "sqlite_value": 12
+              },
+              {
+                "field": "pieces",
+                "sqlite_value": 0
+              },
+              {
+                "field": "reserved_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "produced_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "created_at",
+                "sqlite_value": "2025-06-19T13:58:39.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 4,
+            "issue": "Record not found in Supabase",
+            "sqlite_record": {
+              "id": 4,
+              "order_id": 2,
+              "product_id": 3,
+              "quantity": 203,
+              "boxes": 20,
+              "pieces": 3,
+              "reserved_quantity": 0,
+              "produced_quantity": 0,
+              "notes": "",
+              "created_at": "2025-06-19T13:58:39.000Z",
+              "allocated_batches": null
+            }
+          },
+          {
+            "record_id": 5,
+            "differences": [
+              {
+                "field": "boxes",
+                "sqlite_value": 25
+              },
+              {
+                "field": "pieces",
+                "sqlite_value": 0
+              },
+              {
+                "field": "reserved_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "produced_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "created_at",
+                "sqlite_value": "2025-06-20T04:59:42.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 6,
+            "differences": [
+              {
+                "field": "boxes",
+                "sqlite_value": 27
+              },
+              {
+                "field": "pieces",
+                "sqlite_value": 7
+              },
+              {
+                "field": "reserved_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "produced_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "created_at",
+                "sqlite_value": "2025-06-20T04:59:42.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 7,
+            "differences": [
+              {
+                "field": "boxes",
+                "sqlite_value": 37
+              },
+              {
+                "field": "pieces",
+                "sqlite_value": 4
+              },
+              {
+                "field": "reserved_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "produced_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "created_at",
+                "sqlite_value": "2025-06-20T04:59:42.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 8,
+            "differences": [
+              {
+                "field": "boxes",
+                "sqlite_value": 37
+              },
+              {
+                "field": "pieces",
+                "sqlite_value": 4
+              },
+              {
+                "field": "reserved_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "produced_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "created_at",
+                "sqlite_value": "2025-06-20T05:00:42.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 9,
+            "differences": [
+              {
+                "field": "boxes",
+                "sqlite_value": 25
+              },
+              {
+                "field": "pieces",
+                "sqlite_value": 0
+              },
+              {
+                "field": "reserved_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "produced_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "created_at",
+                "sqlite_value": "2025-06-20T07:43:00.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 10,
+            "differences": [
+              {
+                "field": "boxes",
+                "sqlite_value": 33
+              },
+              {
+                "field": "pieces",
+                "sqlite_value": 3
+              },
+              {
+                "field": "reserved_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "produced_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "created_at",
+                "sqlite_value": "2025-06-20T07:43:00.000Z"
+              }
+            ]
+          }
+        ]
+      },
+      "status": "multiple_issues",
+      "error": null
+    },
+    "production": {
+      "sqlite_count": 46,
+      "supabase_count": 40,
+      "count_match": false,
+      "sample_data_validation": {
+        "samples_checked": 10,
+        "perfect_matches": 0,
+        "records_with_differences": 10,
+        "differences": [
+          {
+            "record_id": 1,
+            "issue": "Record not found in Supabase",
+            "sqlite_record": {
+              "id": 1,
+              "product_id": 3,
+              "production_date": "2025-06-18T00:00:00.000Z",
+              "total_quantity": 120,
+              "boxes_quantity": 5,
+              "pieces_quantity": 0,
+              "expiry_date": "2026-06-18T00:00:00.000Z",
+              "responsible": "system",
+              "notes": "",
+              "created_at": "2025-06-18T19:05:45.000Z",
+              "production_time": null,
+              "created_by_user_id": null
+            }
+          },
+          {
+            "record_id": 2,
+            "issue": "Record not found in Supabase",
+            "sqlite_record": {
+              "id": 2,
+              "product_id": 3,
+              "production_date": "2025-06-18T00:00:00.000Z",
+              "total_quantity": 100,
+              "boxes_quantity": 5,
+              "pieces_quantity": 5,
+              "expiry_date": "2026-06-18T00:00:00.000Z",
+              "responsible": "system",
+              "notes": "",
+              "created_at": "2025-06-18T19:06:22.000Z",
+              "production_time": null,
+              "created_by_user_id": null
+            }
+          },
+          {
+            "record_id": 3,
+            "differences": [
+              {
+                "field": "total_quantity",
+                "sqlite_value": 150
+              },
+              {
+                "field": "boxes_quantity",
+                "sqlite_value": 12
+              },
+              {
+                "field": "pieces_quantity",
+                "sqlite_value": 6
+              },
+              {
+                "field": "expiry_date",
+                "sqlite_value": "2026-06-18T00:00:00.000Z"
+              },
+              {
+                "field": "responsible",
+                "sqlite_value": "Сухоруков"
+              }
+            ]
+          },
+          {
+            "record_id": 4,
+            "differences": [
+              {
+                "field": "total_quantity",
+                "sqlite_value": 100
+              },
+              {
+                "field": "boxes_quantity",
+                "sqlite_value": 12
+              },
+              {
+                "field": "pieces_quantity",
+                "sqlite_value": 4
+              },
+              {
+                "field": "expiry_date",
+                "sqlite_value": "2026-06-19T00:00:00.000Z"
+              },
+              {
+                "field": "responsible",
+                "sqlite_value": "Сухоруков"
+              }
+            ]
+          },
+          {
+            "record_id": 5,
+            "differences": [
+              {
+                "field": "total_quantity",
+                "sqlite_value": 23
+              },
+              {
+                "field": "boxes_quantity",
+                "sqlite_value": 2
+              },
+              {
+                "field": "pieces_quantity",
+                "sqlite_value": 7
+              },
+              {
+                "field": "expiry_date",
+                "sqlite_value": "2026-06-19T00:00:00.000Z"
+              },
+              {
+                "field": "responsible",
+                "sqlite_value": "system"
+              }
+            ]
+          },
+          {
+            "record_id": 6,
+            "differences": [
+              {
+                "field": "total_quantity",
+                "sqlite_value": 120
+              },
+              {
+                "field": "boxes_quantity",
+                "sqlite_value": 15
+              },
+              {
+                "field": "pieces_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "expiry_date",
+                "sqlite_value": "2026-06-19T00:00:00.000Z"
+              },
+              {
+                "field": "responsible",
+                "sqlite_value": "Сухоруков"
+              }
+            ]
+          },
+          {
+            "record_id": 7,
+            "differences": [
+              {
+                "field": "total_quantity",
+                "sqlite_value": 156
+              },
+              {
+                "field": "boxes_quantity",
+                "sqlite_value": 15
+              },
+              {
+                "field": "pieces_quantity",
+                "sqlite_value": 6
+              },
+              {
+                "field": "expiry_date",
+                "sqlite_value": "2026-06-19T00:00:00.000Z"
+              },
+              {
+                "field": "responsible",
+                "sqlite_value": "Сухоруков"
+              }
+            ]
+          },
+          {
+            "record_id": 8,
+            "differences": [
+              {
+                "field": "total_quantity",
+                "sqlite_value": 160
+              },
+              {
+                "field": "boxes_quantity",
+                "sqlite_value": 16
+              },
+              {
+                "field": "pieces_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "expiry_date",
+                "sqlite_value": "2026-06-19T00:00:00.000Z"
+              },
+              {
+                "field": "responsible",
+                "sqlite_value": "system"
+              }
+            ]
+          },
+          {
+            "record_id": 9,
+            "issue": "Record not found in Supabase",
+            "sqlite_record": {
+              "id": 9,
+              "product_id": 3,
+              "production_date": "2025-06-19T00:00:00.000Z",
+              "total_quantity": 25,
+              "boxes_quantity": 2,
+              "pieces_quantity": 5,
+              "expiry_date": "2026-06-19T00:00:00.000Z",
+              "responsible": "Сухоруков",
+              "notes": "тест 2",
+              "created_at": "2025-06-19T10:02:15.000Z",
+              "production_time": null,
+              "created_by_user_id": null
+            }
+          },
+          {
+            "record_id": 10,
+            "differences": [
+              {
+                "field": "total_quantity",
+                "sqlite_value": 234
+              },
+              {
+                "field": "boxes_quantity",
+                "sqlite_value": 23
+              },
+              {
+                "field": "pieces_quantity",
+                "sqlite_value": 4
+              },
+              {
+                "field": "expiry_date",
+                "sqlite_value": "2026-06-19T00:00:00.000Z"
+              },
+              {
+                "field": "responsible",
+                "sqlite_value": "Сухоруков"
+              }
+            ]
+          }
+        ]
+      },
+      "status": "multiple_issues",
+      "error": null
+    },
+    "production_batches": {
+      "sqlite_count": 44,
+      "supabase_count": 40,
+      "count_match": false,
+      "sample_data_validation": {
+        "samples_checked": 10,
+        "perfect_matches": 0,
+        "records_with_differences": 10,
+        "differences": [
+          {
+            "record_id": 1,
+            "issue": "Record not found in Supabase",
+            "sqlite_record": {
+              "id": 1,
+              "product_id": 3,
+              "batch_date": "2025-06-18T00:00:00.000Z",
+              "production_date": "2025-06-18T00:00:00.000Z",
+              "total_quantity": 100,
+              "available_quantity": 100,
+              "reserved_quantity": 0,
+              "expiry_date": "2026-06-18T00:00:00.000Z",
+              "production_id": 2,
+              "status": "ACTIVE",
+              "created_at": "2025-06-24T15:45:18.000Z",
+              "updated_at": "2025-06-24T15:45:18.000Z",
+              "notes": null,
+              "used_quantity": 0
+            }
+          },
+          {
+            "record_id": 2,
+            "differences": [
+              {
+                "field": "batch_date",
+                "sqlite_value": "2025-06-18T00:00:00.000Z"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 150
+              },
+              {
+                "field": "available_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "reserved_quantity",
+                "sqlite_value": 140
+              },
+              {
+                "field": "production_id",
+                "sqlite_value": 3
+              },
+              {
+                "field": "status",
+                "sqlite_value": "ACTIVE",
+                "supabase_value": "active"
+              },
+              {
+                "field": "updated_at",
+                "sqlite_value": "2025-06-25T08:50:32.000Z"
+              },
+              {
+                "field": "used_quantity",
+                "sqlite_value": 0
+              }
+            ]
+          },
+          {
+            "record_id": 4,
+            "differences": [
+              {
+                "field": "batch_date",
+                "sqlite_value": "2025-06-19T00:00:00.000Z"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 100
+              },
+              {
+                "field": "available_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "reserved_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "production_id",
+                "sqlite_value": 4
+              },
+              {
+                "field": "status",
+                "sqlite_value": "ACTIVE",
+                "supabase_value": "active"
+              },
+              {
+                "field": "updated_at",
+                "sqlite_value": "2025-06-25T13:11:39.000Z"
+              },
+              {
+                "field": "used_quantity",
+                "sqlite_value": 0
+              }
+            ]
+          },
+          {
+            "record_id": 7,
+            "differences": [
+              {
+                "field": "batch_date",
+                "sqlite_value": "2025-06-19T00:00:00.000Z"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 156
+              },
+              {
+                "field": "available_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "reserved_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "production_id",
+                "sqlite_value": 7
+              },
+              {
+                "field": "status",
+                "sqlite_value": "ACTIVE",
+                "supabase_value": "active"
+              },
+              {
+                "field": "updated_at",
+                "sqlite_value": "2025-06-25T13:12:11.000Z"
+              },
+              {
+                "field": "used_quantity",
+                "sqlite_value": 0
+              }
+            ]
+          },
+          {
+            "record_id": 8,
+            "differences": [
+              {
+                "field": "batch_date",
+                "sqlite_value": "2025-06-19T00:00:00.000Z"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 162
+              },
+              {
+                "field": "available_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "reserved_quantity",
+                "sqlite_value": 86
+              },
+              {
+                "field": "production_id",
+                "sqlite_value": 8
+              },
+              {
+                "field": "status",
+                "sqlite_value": "ACTIVE",
+                "supabase_value": "active"
+              },
+              {
+                "field": "updated_at",
+                "sqlite_value": "2025-06-25T15:06:17.000Z"
+              },
+              {
+                "field": "used_quantity",
+                "sqlite_value": 0
+              }
+            ]
+          },
+          {
+            "record_id": 9,
+            "issue": "Record not found in Supabase",
+            "sqlite_record": {
+              "id": 9,
+              "product_id": 3,
+              "batch_date": "2025-06-19T00:00:00.000Z",
+              "production_date": "2025-06-19T00:00:00.000Z",
+              "total_quantity": 25,
+              "available_quantity": 25,
+              "reserved_quantity": 0,
+              "expiry_date": "2026-06-19T00:00:00.000Z",
+              "production_id": 9,
+              "status": "ACTIVE",
+              "created_at": "2025-06-24T15:45:18.000Z",
+              "updated_at": "2025-06-24T15:45:18.000Z",
+              "notes": null,
+              "used_quantity": 0
+            }
+          },
+          {
+            "record_id": 10,
+            "differences": [
+              {
+                "field": "batch_date",
+                "sqlite_value": "2025-06-19T00:00:00.000Z"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 234
+              },
+              {
+                "field": "available_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "reserved_quantity",
+                "sqlite_value": 234
+              },
+              {
+                "field": "production_id",
+                "sqlite_value": 10
+              },
+              {
+                "field": "status",
+                "sqlite_value": "ACTIVE",
+                "supabase_value": "active"
+              },
+              {
+                "field": "updated_at",
+                "sqlite_value": "2025-06-25T09:19:19.000Z"
+              },
+              {
+                "field": "used_quantity",
+                "sqlite_value": 0
+              }
+            ]
+          },
+          {
+            "record_id": 11,
+            "issue": "Record not found in Supabase",
+            "sqlite_record": {
+              "id": 11,
+              "product_id": 369,
+              "batch_date": "2025-06-20T00:00:00.000Z",
+              "production_date": "2025-06-20T00:00:00.000Z",
+              "total_quantity": 300,
+              "available_quantity": 0,
+              "reserved_quantity": 0,
+              "expiry_date": "2026-06-20T00:00:00.000Z",
+              "production_id": 12,
+              "status": "ACTIVE",
+              "created_at": "2025-06-24T15:45:18.000Z",
+              "updated_at": "2025-06-25T13:13:12.000Z",
+              "notes": null,
+              "used_quantity": 0
+            }
+          },
+          {
+            "record_id": 12,
+            "differences": [
+              {
+                "field": "batch_date",
+                "sqlite_value": "2025-06-22T00:00:00.000Z"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 89
+              },
+              {
+                "field": "available_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "reserved_quantity",
+                "sqlite_value": 89
+              },
+              {
+                "field": "production_id",
+                "sqlite_value": 13
+              },
+              {
+                "field": "status",
+                "sqlite_value": "ACTIVE",
+                "supabase_value": "active"
+              },
+              {
+                "field": "updated_at",
+                "sqlite_value": "2025-06-25T12:31:58.000Z"
+              },
+              {
+                "field": "used_quantity",
+                "sqlite_value": 0
+              }
+            ]
+          },
+          {
+            "record_id": 13,
+            "differences": [
+              {
+                "field": "batch_date",
+                "sqlite_value": "2025-06-22T00:00:00.000Z"
+              },
+              {
+                "field": "total_quantity",
+                "sqlite_value": 333
+              },
+              {
+                "field": "available_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "reserved_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "production_id",
+                "sqlite_value": 14
+              },
+              {
+                "field": "status",
+                "sqlite_value": "ACTIVE",
+                "supabase_value": "active"
+              },
+              {
+                "field": "updated_at",
+                "sqlite_value": "2025-06-25T13:11:16.000Z"
+              },
+              {
+                "field": "used_quantity",
+                "sqlite_value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "status": "multiple_issues",
+      "error": null
+    },
+    "stock_movements": {
+      "sqlite_count": 113,
+      "supabase_count": 0,
+      "count_match": false,
+      "sample_data_validation": {
+        "samples_checked": 0,
+        "perfect_matches": 0,
+        "records_with_differences": 0,
+        "differences": []
+      },
+      "status": "data_match_count_mismatch",
+      "error": null
+    },
+    "writeoffs": {
+      "sqlite_count": 50,
+      "supabase_count": 46,
+      "count_match": false,
+      "sample_data_validation": {
+        "samples_checked": 10,
+        "perfect_matches": 0,
+        "records_with_differences": 10,
+        "differences": [
+          {
+            "record_id": 1,
+            "differences": [
+              {
+                "field": "total_quantity",
+                "sqlite_value": 12
+              },
+              {
+                "field": "boxes_quantity",
+                "sqlite_value": 1
+              },
+              {
+                "field": "pieces_quantity",
+                "sqlite_value": 2
+              },
+              {
+                "field": "responsible",
+                "sqlite_value": "Сухоруков"
+              }
+            ]
+          },
+          {
+            "record_id": 2,
+            "differences": [
+              {
+                "field": "total_quantity",
+                "sqlite_value": 12
+              },
+              {
+                "field": "boxes_quantity",
+                "sqlite_value": 1
+              },
+              {
+                "field": "pieces_quantity",
+                "sqlite_value": 2
+              },
+              {
+                "field": "responsible",
+                "sqlite_value": "Сухоруков"
+              }
+            ]
+          },
+          {
+            "record_id": 3,
+            "issue": "Record not found in Supabase",
+            "sqlite_record": {
+              "id": 3,
+              "product_id": 3,
+              "writeoff_date": "2025-06-19T00:00:00.000Z",
+              "total_quantity": 12,
+              "boxes_quantity": 1,
+              "pieces_quantity": 2,
+              "reason": "Закінчення терміну придатності",
+              "responsible": "Сухоруков",
+              "notes": "",
+              "created_at": "2025-06-19T09:46:28.000Z",
+              "created_by_user_id": null
+            }
+          },
+          {
+            "record_id": 4,
+            "differences": [
+              {
+                "field": "total_quantity",
+                "sqlite_value": 13
+              },
+              {
+                "field": "boxes_quantity",
+                "sqlite_value": 1
+              },
+              {
+                "field": "pieces_quantity",
+                "sqlite_value": 3
+              },
+              {
+                "field": "responsible",
+                "sqlite_value": "Сухоруков"
+              }
+            ]
+          },
+          {
+            "record_id": 5,
+            "issue": "Record not found in Supabase",
+            "sqlite_record": {
+              "id": 5,
+              "product_id": 3,
+              "writeoff_date": "2025-06-19T00:00:00.000Z",
+              "total_quantity": 13,
+              "boxes_quantity": 1,
+              "pieces_quantity": 3,
+              "reason": "Втрата товарного вигляду",
+              "responsible": "Сухоруков",
+              "notes": "тест",
+              "created_at": "2025-06-19T09:52:51.000Z",
+              "created_by_user_id": null
+            }
+          },
+          {
+            "record_id": 6,
+            "differences": [
+              {
+                "field": "total_quantity",
+                "sqlite_value": 5
+              },
+              {
+                "field": "boxes_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "pieces_quantity",
+                "sqlite_value": 5
+              },
+              {
+                "field": "responsible",
+                "sqlite_value": "Тест"
+              }
+            ]
+          },
+          {
+            "record_id": 7,
+            "differences": [
+              {
+                "field": "total_quantity",
+                "sqlite_value": 100
+              },
+              {
+                "field": "boxes_quantity",
+                "sqlite_value": 10
+              },
+              {
+                "field": "pieces_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "responsible",
+                "sqlite_value": "Сухоруков"
+              }
+            ]
+          },
+          {
+            "record_id": 8,
+            "differences": [
+              {
+                "field": "total_quantity",
+                "sqlite_value": 100
+              },
+              {
+                "field": "boxes_quantity",
+                "sqlite_value": 10
+              },
+              {
+                "field": "pieces_quantity",
+                "sqlite_value": 0
+              },
+              {
+                "field": "responsible",
+                "sqlite_value": "Сухоруков"
+              }
+            ]
+          },
+          {
+            "record_id": 9,
+            "differences": [
+              {
+                "field": "total_quantity",
+                "sqlite_value": 98
+              },
+              {
+                "field": "boxes_quantity",
+                "sqlite_value": 9
+              },
+              {
+                "field": "pieces_quantity",
+                "sqlite_value": 8
+              },
+              {
+                "field": "responsible",
+                "sqlite_value": "Сухоруков"
+              }
+            ]
+          },
+          {
+            "record_id": 10,
+            "differences": [
+              {
+                "field": "total_quantity",
+                "sqlite_value": 122
+              },
+              {
+                "field": "boxes_quantity",
+                "sqlite_value": 12
+              },
+              {
+                "field": "pieces_quantity",
+                "sqlite_value": 2
+              },
+              {
+                "field": "responsible",
+                "sqlite_value": "Сухоруков"
+              }
+            ]
+          }
+        ]
+      },
+      "status": "multiple_issues",
+      "error": null
+    },
+    "arrivals": {
+      "sqlite_count": 7,
+      "supabase_count": 7,
+      "count_match": true,
+      "sample_data_validation": {
+        "samples_checked": 7,
+        "perfect_matches": 0,
+        "records_with_differences": 7,
+        "differences": [
+          {
+            "record_id": 1,
+            "differences": [
+              {
+                "field": "reason",
+                "sqlite_value": "повернення"
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "system"
+              }
+            ]
+          },
+          {
+            "record_id": 2,
+            "differences": [
+              {
+                "field": "reason",
+                "sqlite_value": "повернення"
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "system"
+              }
+            ]
+          },
+          {
+            "record_id": 3,
+            "differences": [
+              {
+                "field": "reason",
+                "sqlite_value": "повернення"
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "system"
+              }
+            ]
+          },
+          {
+            "record_id": 4,
+            "differences": [
+              {
+                "field": "reason",
+                "sqlite_value": "повернення"
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "system"
+              }
+            ]
+          },
+          {
+            "record_id": 5,
+            "differences": [
+              {
+                "field": "reason",
+                "sqlite_value": "повернення"
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "system"
+              }
+            ]
+          },
+          {
+            "record_id": 6,
+            "differences": [
+              {
+                "field": "reason",
+                "sqlite_value": "повернення"
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "system"
+              }
+            ]
+          },
+          {
+            "record_id": 7,
+            "differences": [
+              {
+                "field": "reason",
+                "sqlite_value": "повернення"
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "system"
+              }
+            ]
+          }
+        ]
+      },
+      "status": "count_match_data_issues",
+      "error": null
+    },
+    "arrivals_items": {
+      "sqlite_count": 8,
+      "supabase_count": null,
+      "count_match": false,
+      "sample_data_validation": {
+        "samples_checked": 0,
+        "perfect_matches": 0,
+        "records_with_differences": 0,
+        "differences": []
+      },
+      "status": "data_match_count_mismatch",
+      "error": null
+    },
+    "production_plans": {
+      "sqlite_count": 3,
+      "supabase_count": 3,
+      "count_match": true,
+      "sample_data_validation": {
+        "samples_checked": 3,
+        "perfect_matches": 0,
+        "records_with_differences": 3,
+        "differences": [
+          {
+            "record_id": 1,
+            "differences": [
+              {
+                "field": "plan_date",
+                "sqlite_value": "2025-06-20T00:00:00.000Z"
+              },
+              {
+                "field": "status",
+                "sqlite_value": "ACTIVE",
+                "supabase_value": "active"
+              },
+              {
+                "field": "total_planned",
+                "sqlite_value": 276
+              },
+              {
+                "field": "total_produced",
+                "sqlite_value": 0
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "system",
+                "supabase_value": null
+              }
+            ]
+          },
+          {
+            "record_id": 2,
+            "differences": [
+              {
+                "field": "plan_date",
+                "sqlite_value": "2025-06-20T00:00:00.000Z"
+              },
+              {
+                "field": "status",
+                "sqlite_value": "ACTIVE",
+                "supabase_value": "active"
+              },
+              {
+                "field": "total_planned",
+                "sqlite_value": 276
+              },
+              {
+                "field": "total_produced",
+                "sqlite_value": 0
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "system",
+                "supabase_value": null
+              }
+            ]
+          },
+          {
+            "record_id": 3,
+            "differences": [
+              {
+                "field": "plan_date",
+                "sqlite_value": "2025-06-20T00:00:00.000Z"
+              },
+              {
+                "field": "status",
+                "sqlite_value": "ACTIVE",
+                "supabase_value": "active"
+              },
+              {
+                "field": "total_planned",
+                "sqlite_value": 276
+              },
+              {
+                "field": "total_produced",
+                "sqlite_value": 0
+              },
+              {
+                "field": "created_by",
+                "sqlite_value": "system",
+                "supabase_value": null
+              }
+            ]
+          }
+        ]
+      },
+      "status": "count_match_data_issues",
+      "error": null
+    },
+    "production_plan_items": {
+      "sqlite_count": 6,
+      "supabase_count": 6,
+      "count_match": true,
+      "sample_data_validation": {
+        "samples_checked": 6,
+        "perfect_matches": 0,
+        "records_with_differences": 6,
+        "differences": [
+          {
+            "record_id": 1,
+            "differences": [
+              {
+                "field": "quantity_needed",
+                "sqlite_value": 180
+              },
+              {
+                "field": "quantity_planned",
+                "sqlite_value": 180
+              },
+              {
+                "field": "quantity_produced",
+                "sqlite_value": 0
+              },
+              {
+                "field": "priority",
+                "sqlite_value": "CRITICAL"
+              },
+              {
+                "field": "reason",
+                "sqlite_value": "ORDER"
+              },
+              {
+                "field": "created_at",
+                "sqlite_value": "2025-06-20T08:44:19.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 2,
+            "differences": [
+              {
+                "field": "quantity_needed",
+                "sqlite_value": 96
+              },
+              {
+                "field": "quantity_planned",
+                "sqlite_value": 96
+              },
+              {
+                "field": "quantity_produced",
+                "sqlite_value": 0
+              },
+              {
+                "field": "priority",
+                "sqlite_value": "HIGH"
+              },
+              {
+                "field": "reason",
+                "sqlite_value": "MIN_STOCK"
+              },
+              {
+                "field": "created_at",
+                "sqlite_value": "2025-06-20T08:44:19.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 3,
+            "differences": [
+              {
+                "field": "quantity_needed",
+                "sqlite_value": 180
+              },
+              {
+                "field": "quantity_planned",
+                "sqlite_value": 180
+              },
+              {
+                "field": "quantity_produced",
+                "sqlite_value": 0
+              },
+              {
+                "field": "priority",
+                "sqlite_value": "CRITICAL"
+              },
+              {
+                "field": "reason",
+                "sqlite_value": "ORDER"
+              },
+              {
+                "field": "created_at",
+                "sqlite_value": "2025-06-20T09:00:44.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 4,
+            "differences": [
+              {
+                "field": "quantity_needed",
+                "sqlite_value": 96
+              },
+              {
+                "field": "quantity_planned",
+                "sqlite_value": 96
+              },
+              {
+                "field": "quantity_produced",
+                "sqlite_value": 0
+              },
+              {
+                "field": "priority",
+                "sqlite_value": "HIGH"
+              },
+              {
+                "field": "reason",
+                "sqlite_value": "MIN_STOCK"
+              },
+              {
+                "field": "created_at",
+                "sqlite_value": "2025-06-20T09:00:44.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 5,
+            "differences": [
+              {
+                "field": "quantity_needed",
+                "sqlite_value": 180
+              },
+              {
+                "field": "quantity_planned",
+                "sqlite_value": 180
+              },
+              {
+                "field": "quantity_produced",
+                "sqlite_value": 0
+              },
+              {
+                "field": "priority",
+                "sqlite_value": "CRITICAL"
+              },
+              {
+                "field": "reason",
+                "sqlite_value": "ORDER"
+              },
+              {
+                "field": "created_at",
+                "sqlite_value": "2025-06-20T09:06:04.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 6,
+            "differences": [
+              {
+                "field": "quantity_needed",
+                "sqlite_value": 96
+              },
+              {
+                "field": "quantity_planned",
+                "sqlite_value": 96
+              },
+              {
+                "field": "quantity_produced",
+                "sqlite_value": 0
+              },
+              {
+                "field": "priority",
+                "sqlite_value": "HIGH"
+              },
+              {
+                "field": "reason",
+                "sqlite_value": "MIN_STOCK"
+              },
+              {
+                "field": "created_at",
+                "sqlite_value": "2025-06-20T09:06:04.000Z"
+              }
+            ]
+          }
+        ]
+      },
+      "status": "count_match_data_issues",
+      "error": null
+    },
+    "operations_log": {
+      "sqlite_count": 87,
+      "supabase_count": 87,
+      "count_match": true,
+      "sample_data_validation": {
+        "samples_checked": 10,
+        "perfect_matches": 0,
+        "records_with_differences": 10,
+        "differences": [
+          {
+            "record_id": 1,
+            "differences": [
+              {
+                "field": "operation_id",
+                "sqlite_value": 1
+              },
+              {
+                "field": "entity_type",
+                "sqlite_value": "order"
+              },
+              {
+                "field": "entity_id",
+                "sqlite_value": 1
+              },
+              {
+                "field": "new_data",
+                "sqlite_value": "{\"order_number\":\"20250626-001\",\"client_name\":\"Тестовий клієнт\",\"total_quantity\":100}"
+              },
+              {
+                "field": "description",
+                "sqlite_value": "Створено замовлення №20250626-001 для клієнта \"Тестовий клієнт\""
+              },
+              {
+                "field": "user_name",
+                "sqlite_value": "Комерційний директор"
+              }
+            ]
+          },
+          {
+            "record_id": 2,
+            "differences": [
+              {
+                "field": "operation_id",
+                "sqlite_value": 1
+              },
+              {
+                "field": "entity_type",
+                "sqlite_value": "production"
+              },
+              {
+                "field": "entity_id",
+                "sqlite_value": 1
+              },
+              {
+                "field": "new_data",
+                "sqlite_value": "{\"product_name\":\"Піца Маргарита\",\"quantity\":144,\"batch_date\":\"2025-06-26\"}"
+              },
+              {
+                "field": "description",
+                "sqlite_value": "Виробництво: Піца Маргарита - 144 шт (партія 2025-06-26)"
+              },
+              {
+                "field": "user_name",
+                "sqlite_value": "Начальник виробництва"
+              }
+            ]
+          },
+          {
+            "record_id": 3,
+            "differences": [
+              {
+                "field": "operation_id",
+                "sqlite_value": 19
+              },
+              {
+                "field": "entity_type",
+                "sqlite_value": "order"
+              },
+              {
+                "field": "entity_id",
+                "sqlite_value": 19
+              },
+              {
+                "field": "new_data",
+                "sqlite_value": "{\"id\":19,\"order_number\":\"20250626-001\",\"client_name\":\"\\n                        ТОВ \\\"АНДІ ЛТД\\\" (Neftek)\\n                    \",\"client_contact\":\"Контакт: Алексей Сницеренко\\nТел: +380975421836\\nАдреса: м. Дныпро\",\"order_date\":\"2025-06-26\",\"delivery_date\":\"2025-07-02\",\"status\":\"NEW\",\"total_quantity\":10,\"total_boxes\":1,\"notes\":\"\",\"created_by\":\"Усатий С.\",\"created_at\":\"2025-06-26 14:07:12\",\"updated_at\":\"2025-06-26 14:07:12\",\"client_id\":5,\"items_count\":1,\"items_total_quantity\":10,\"items\":[{\"id\":37,\"order_id\":19,\"product_id\":368,\"quantity\":10,\"boxes\":1,\"pieces\":0,\"reserved_quantity\":0,\"produced_quantity\":0,\"notes\":\"\",\"created_at\":\"2025-06-26 14:07:12\",\"allocated_batches\":[{\"batch_id\":null,\"batch_date\":null,\"quantity\":10}],\"product_name\":\"Піца \\\"Флоренція\\\", 30 см\",\"product_code\":\"ФЛ30\",\"pieces_per_box\":10}]}"
+              },
+              {
+                "field": "description",
+                "sqlite_value": "Створено замовлення №20250626-001 для клієнта \"\n                        ТОВ \"АНДІ ЛТД\" (Neftek)\n                    \" на суму 10 шт"
+              },
+              {
+                "field": "user_name",
+                "sqlite_value": "Усатий С."
+              },
+              {
+                "field": "user_agent",
+                "sqlite_value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0"
+              }
+            ]
+          },
+          {
+            "record_id": 4,
+            "differences": [
+              {
+                "field": "operation_id",
+                "sqlite_value": 27
+              },
+              {
+                "field": "entity_type",
+                "sqlite_value": "production"
+              },
+              {
+                "field": "entity_id",
+                "sqlite_value": 27
+              },
+              {
+                "field": "new_data",
+                "sqlite_value": "{\"product_name\":\"Піца \\\"Флоренція\\\", 30 см\",\"product_code\":\"ФЛ30\",\"quantity\":10,\"batch_date\":\"2025-06-26\",\"responsible\":\"Сухоруков\"}"
+              },
+              {
+                "field": "description",
+                "sqlite_value": "Виробництво: Піца \"Флоренція\", 30 см - 10 шт (партія 2025-06-26)"
+              },
+              {
+                "field": "user_name",
+                "sqlite_value": "Сухоруков"
+              },
+              {
+                "field": "user_agent",
+                "sqlite_value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0"
+              }
+            ]
+          },
+          {
+            "record_id": 5,
+            "differences": [
+              {
+                "field": "operation_id",
+                "sqlite_value": 1127
+              },
+              {
+                "field": "entity_type",
+                "sqlite_value": "product"
+              },
+              {
+                "field": "entity_id",
+                "sqlite_value": 1127
+              },
+              {
+                "field": "new_data",
+                "sqlite_value": "{\"id\":1127,\"name\":\"Піца Тест 2\",\"code\":\"ПТ32\",\"weight\":400,\"barcode\":null,\"pieces_per_box\":10,\"stock_pieces\":10,\"stock_boxes\":1,\"min_stock_pieces\":0,\"created_at\":\"2025-06-26 14:14:40\",\"updated_at\":\"2025-06-26 14:14:40\",\"calculated_boxes\":1}"
+              },
+              {
+                "field": "description",
+                "sqlite_value": "Створено товар \"Піца Тест 2\" (ПТ32)"
+              },
+              {
+                "field": "user_name",
+                "sqlite_value": "Адміністратор системи"
+              },
+              {
+                "field": "user_agent",
+                "sqlite_value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0"
+              }
+            ]
+          },
+          {
+            "record_id": 6,
+            "differences": [
+              {
+                "field": "operation_id",
+                "sqlite_value": 1
+              },
+              {
+                "field": "entity_type",
+                "sqlite_value": "order"
+              },
+              {
+                "field": "entity_id",
+                "sqlite_value": 1
+              },
+              {
+                "field": "new_data",
+                "sqlite_value": "{\"order_number\":\"20250626-001\",\"client_name\":\"Тестовий клієнт\",\"total_quantity\":100}"
+              },
+              {
+                "field": "description",
+                "sqlite_value": "Створено замовлення №20250626-001 для клієнта \"Тестовий клієнт\""
+              },
+              {
+                "field": "user_name",
+                "sqlite_value": "Комерційний директор"
+              }
+            ]
+          },
+          {
+            "record_id": 7,
+            "differences": [
+              {
+                "field": "operation_id",
+                "sqlite_value": 1
+              },
+              {
+                "field": "entity_type",
+                "sqlite_value": "production"
+              },
+              {
+                "field": "entity_id",
+                "sqlite_value": 1
+              },
+              {
+                "field": "new_data",
+                "sqlite_value": "{\"product_name\":\"Піца Маргарита\",\"quantity\":144,\"batch_date\":\"2025-06-26\"}"
+              },
+              {
+                "field": "description",
+                "sqlite_value": "Виробництво: Піца Маргарита - 144 шт (партія 2025-06-26)"
+              },
+              {
+                "field": "user_name",
+                "sqlite_value": "Начальник виробництва"
+              }
+            ]
+          },
+          {
+            "record_id": 8,
+            "differences": [
+              {
+                "field": "operation_id",
+                "sqlite_value": 28
+              },
+              {
+                "field": "entity_type",
+                "sqlite_value": "production"
+              },
+              {
+                "field": "entity_id",
+                "sqlite_value": 28
+              },
+              {
+                "field": "new_data",
+                "sqlite_value": "{\"product_name\":\"Піца \\\"4 сири з грушою\\\", 30 см\",\"product_code\":\"4СГ30\",\"quantity\":120,\"batch_date\":\"2025-06-27\",\"responsible\":\"Сухоруков\"}"
+              },
+              {
+                "field": "description",
+                "sqlite_value": "Виробництво: Піца \"4 сири з грушою\", 30 см - 120 шт (партія 2025-06-27)"
+              },
+              {
+                "field": "user_name",
+                "sqlite_value": "Сухоруков"
+              },
+              {
+                "field": "user_agent",
+                "sqlite_value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0"
+              }
+            ]
+          },
+          {
+            "record_id": 9,
+            "differences": [
+              {
+                "field": "operation_id",
+                "sqlite_value": 29
+              },
+              {
+                "field": "entity_type",
+                "sqlite_value": "production"
+              },
+              {
+                "field": "entity_id",
+                "sqlite_value": 29
+              },
+              {
+                "field": "new_data",
+                "sqlite_value": "{\"product_name\":\"Піца \\\"4 сири\\\", ТМ ECO&PIZZA, 30 см. (без горіхів)\",\"product_code\":\"4С30\",\"quantity\":97,\"batch_date\":\"2025-06-27\",\"responsible\":\"Сухоруков\"}"
+              },
+              {
+                "field": "description",
+                "sqlite_value": "Виробництво: Піца \"4 сири\", ТМ ECO&PIZZA, 30 см. (без горіхів) - 97 шт (партія 2025-06-27)"
+              },
+              {
+                "field": "user_name",
+                "sqlite_value": "Сухоруков"
+              },
+              {
+                "field": "user_agent",
+                "sqlite_value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36 Edg/136.0.0.0"
+              }
+            ]
+          },
+          {
+            "record_id": 10,
+            "differences": [
+              {
+                "field": "operation_id",
+                "sqlite_value": 30
+              },
+              {
+                "field": "entity_type",
+                "sqlite_value": "production"
+              },
+              {
+                "field": "entity_id",
+                "sqlite_value": 30
+              },
+              {
+                "field": "new_data",
+                "sqlite_value": "{\"product_name\":\"Піца \\\"Пепероні Суджук\\\", 30 см\",\"product_code\":\"ПС30\",\"quantity\":100,\"batch_date\":\"2025-06-27\",\"responsible\":\"Сухоруков\"}"
+              },
+              {
+                "field": "description",
+                "sqlite_value": "Виробництво: Піца \"Пепероні Суджук\", 30 см - 100 шт (партія 2025-06-27)"
+              },
+              {
+                "field": "user_name",
+                "sqlite_value": "Сухоруков"
+              },
+              {
+                "field": "user_agent",
+                "sqlite_value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
+              }
+            ]
+          }
+        ]
+      },
+      "status": "count_match_data_issues",
+      "error": null
+    },
+    "api_audit_log": {
+      "sqlite_count": 0,
+      "supabase_count": 0,
+      "count_match": true,
+      "sample_data_validation": {
+        "samples_checked": 0,
+        "perfect_matches": 0,
+        "records_with_differences": 0,
+        "differences": []
+      },
+      "status": "perfect",
+      "error": null
+    },
+    "security_events": {
+      "sqlite_count": 78,
+      "supabase_count": 71,
+      "count_match": false,
+      "sample_data_validation": {
+        "samples_checked": 10,
+        "perfect_matches": 0,
+        "records_with_differences": 10,
+        "differences": [
+          {
+            "record_id": 1,
+            "differences": [
+              {
+                "field": "details",
+                "sqlite_value": "{\"username\":\"admin\",\"ip_address\":\"127.0.0.1\",\"user_agent\":\"curl/8.5.0\"}",
+                "supabase_value": {
+                  "username": "admin",
+                  "ip_address": "127.0.0.1",
+                  "user_agent": "curl/8.5.0"
+                }
+              },
+              {
+                "field": "timestamp",
+                "sqlite_value": "2025-07-04T19:24:43.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 2,
+            "differences": [
+              {
+                "field": "details",
+                "sqlite_value": "{\"username\":\"admin\",\"ip_address\":\"127.0.0.1\",\"user_agent\":\"curl/8.5.0\"}",
+                "supabase_value": {
+                  "username": "admin",
+                  "ip_address": "127.0.0.1",
+                  "user_agent": "curl/8.5.0"
+                }
+              },
+              {
+                "field": "timestamp",
+                "sqlite_value": "2025-07-04T19:35:34.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 3,
+            "differences": [
+              {
+                "field": "details",
+                "sqlite_value": "{\"username\":\"admin\",\"ip_address\":\"127.0.0.1\",\"user_agent\":\"curl/8.5.0\"}",
+                "supabase_value": {
+                  "username": "admin",
+                  "ip_address": "127.0.0.1",
+                  "user_agent": "curl/8.5.0"
+                }
+              },
+              {
+                "field": "timestamp",
+                "sqlite_value": "2025-07-04T19:45:26.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 4,
+            "differences": [
+              {
+                "field": "details",
+                "sqlite_value": "{\"username\":\"admin\",\"ip_address\":\"127.0.0.1\",\"user_agent\":\"curl/8.5.0\"}",
+                "supabase_value": {
+                  "username": "admin",
+                  "ip_address": "127.0.0.1",
+                  "user_agent": "curl/8.5.0"
+                }
+              },
+              {
+                "field": "timestamp",
+                "sqlite_value": "2025-07-04T19:45:53.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 5,
+            "differences": [
+              {
+                "field": "details",
+                "sqlite_value": "{\"username\":\"admin\",\"ip_address\":\"127.0.0.1\",\"user_agent\":\"curl/8.5.0\"}",
+                "supabase_value": {
+                  "username": "admin",
+                  "ip_address": "127.0.0.1",
+                  "user_agent": "curl/8.5.0"
+                }
+              },
+              {
+                "field": "timestamp",
+                "sqlite_value": "2025-07-04T19:47:40.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 6,
+            "differences": [
+              {
+                "field": "details",
+                "sqlite_value": "{\"username\":\"admin\",\"ip_address\":\"127.0.0.1\",\"user_agent\":\"curl/8.5.0\"}",
+                "supabase_value": {
+                  "username": "admin",
+                  "ip_address": "127.0.0.1",
+                  "user_agent": "curl/8.5.0"
+                }
+              },
+              {
+                "field": "timestamp",
+                "sqlite_value": "2025-07-04T19:48:20.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 7,
+            "differences": [
+              {
+                "field": "details",
+                "sqlite_value": "{\"username\":\"admin\",\"ip_address\":\"127.0.0.1\",\"user_agent\":\"curl/8.5.0\"}",
+                "supabase_value": {
+                  "username": "admin",
+                  "ip_address": "127.0.0.1",
+                  "user_agent": "curl/8.5.0"
+                }
+              },
+              {
+                "field": "timestamp",
+                "sqlite_value": "2025-07-04T19:48:40.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 8,
+            "differences": [
+              {
+                "field": "details",
+                "sqlite_value": "{\"username\":\"admin\",\"ip_address\":\"127.0.0.1\",\"user_agent\":\"curl/8.5.0\"}",
+                "supabase_value": {
+                  "username": "admin",
+                  "ip_address": "127.0.0.1",
+                  "user_agent": "curl/8.5.0"
+                }
+              },
+              {
+                "field": "timestamp",
+                "sqlite_value": "2025-07-04T19:48:56.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 9,
+            "differences": [
+              {
+                "field": "details",
+                "sqlite_value": "{\"username\":\"admin\",\"ip_address\":\"127.0.0.1\",\"user_agent\":\"curl/8.5.0\"}",
+                "supabase_value": {
+                  "username": "admin",
+                  "ip_address": "127.0.0.1",
+                  "user_agent": "curl/8.5.0"
+                }
+              },
+              {
+                "field": "timestamp",
+                "sqlite_value": "2025-07-04T19:51:37.000Z"
+              }
+            ]
+          },
+          {
+            "record_id": 10,
+            "differences": [
+              {
+                "field": "details",
+                "sqlite_value": "{\"username\":\"admin\",\"ip_address\":\"127.0.0.1\",\"user_agent\":\"curl/8.5.0\"}",
+                "supabase_value": {
+                  "username": "admin",
+                  "ip_address": "127.0.0.1",
+                  "user_agent": "curl/8.5.0"
+                }
+              },
+              {
+                "field": "timestamp",
+                "sqlite_value": "2025-07-04T19:52:27.000Z"
+              }
+            ]
+          }
+        ]
+      },
+      "status": "multiple_issues",
+      "error": null
+    }
+  },
+  "summary": {
+    "total_tables": 16,
+    "perfect_matches": 2,
+    "count_mismatches": 8,
+    "data_discrepancies": 11,
+    "validation_errors": 0
+  },
+  "errors": [],
+  "end_time": "2025-07-07T14:16:11.374Z",
+  "duration_minutes": 2.36
+}

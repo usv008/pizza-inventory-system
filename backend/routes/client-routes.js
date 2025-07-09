@@ -8,8 +8,17 @@ const { ValidationError, NotFoundError } = require('../middleware/errors/AppErro
 // Validators
 const { validateClient, validateClientId } = require('../validators/clientValidator');
 
-// Service
-const clientService = require('../services/clientService');
+// Service - переключаємо на Supabase
+const SupabaseClientService = require('../services/supabaseClientService');
+const clientService = new SupabaseClientService();
+// Ініціалізуємо сервіс (OperationsLogController буде null, але це не критично)
+try {
+    const OperationsLogController = require('../controllers/operations-log-controller');
+    clientService.initialize({ OperationsLogController });
+} catch (error) {
+    console.log('⚠️ OperationsLogController не знайдено, ініціалізуємо без нього');
+    clientService.initialize({});
+}
 
 /**
  * @api {get} /api/clients Get all clients

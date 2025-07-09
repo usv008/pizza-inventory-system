@@ -40,6 +40,160 @@
             --radius-lg: 8px;
             --radius-xl: 12px;
         }
+
+        /* Виправлення CSS для модального вікна */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            backdrop-filter: blur(3px);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 2% auto;
+            padding: 0;
+            border-radius: var(--radius-xl);
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        .close {
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+            transition: opacity 0.3s;
+        }
+
+        .close:hover {
+            opacity: 0.7;
+        }
+
+        .modal-body {
+            padding: var(--spacing-xl);
+        }
+
+        .form-group {
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: var(--spacing-sm);
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: var(--spacing-md);
+            border: 2px solid var(--border);
+            border-radius: var(--radius-lg);
+            font-size: 1rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        .form-group small {
+            display: block;
+            margin-top: var(--spacing-sm);
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: flex-end;
+            padding-top: var(--spacing-lg);
+            border-top: 1px solid var(--border);
+        }
+
+        .password-section {
+            background: #f8f9fa;
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            margin: var(--spacing-lg) 0;
+            border: 1px solid #e9ecef;
+        }
+
+        .password-section h4 {
+            margin: 0 0 var(--spacing-md) 0;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                margin: 5% auto;
+                width: 95%;
+            }
+
+            .modal-body {
+                padding: var(--spacing-lg);
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+        }
         
         .users-header {
             display: flex;
@@ -134,7 +288,7 @@
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            min-width: 1000px;
+            min-width: 1200px;
         }
         
         .users-table th,
@@ -153,31 +307,36 @@
         
         .users-table th:first-child,
         .users-table td:first-child {
-            width: 160px;
+            width: 180px;
         }
         
         .users-table th:nth-child(2),
         .users-table td:nth-child(2) {
-            width: 180px;
+            width: 120px;
         }
         
         .users-table th:nth-child(3),
         .users-table td:nth-child(3) {
-            width: 110px;
+            width: 160px;
         }
         
         .users-table th:nth-child(4),
         .users-table td:nth-child(4) {
-            width: 160px;
+            width: 110px;
         }
         
         .users-table th:nth-child(5),
         .users-table td:nth-child(5) {
-            width: 90px;
+            width: 140px;
         }
         
         .users-table th:nth-child(6),
         .users-table td:nth-child(6) {
+            width: 90px;
+        }
+        
+        .users-table th:nth-child(7),
+        .users-table td:nth-child(7) {
             width: 120px;
         }
         
@@ -364,7 +523,7 @@
             
             .users-table {
                 font-size: 0.75em;
-                min-width: 800px;
+                min-width: 900px;
             }
             
             .users-table th,
@@ -445,47 +604,80 @@
                 <span class="close" onclick="closeUserModal()">&times;</span>
             </div>
             
-            <form id="user-form">
-                <div class="form-group">
-                    <label for="username">Ім'я користувача *</label>
-                    <input type="text" id="username" name="username" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="email">Email</label>
-                    <input type="email" id="email" name="email">
-                </div>
-                
-                <div class="form-group">
-                    <label for="phone">Телефон</label>
-                    <input type="tel" id="phone" name="phone">
-                </div>
-                
-                <div class="form-group">
-                    <label for="role">Роль *</label>
-                    <select id="role" name="role" required>
-                        <option value="">Оберіть роль...</option>
-                    </select>
-                </div>
-                
-                <div class="form-group" id="password-group">
-                    <label for="password">Пароль *</label>
-                    <input type="password" id="password" name="password" required>
-                    <small>Мінімум 6 символів</small>
-                </div>
-                
-                <div class="form-group">
-                    <label>
-                        <input type="checkbox" id="active" name="active" checked>
-                        Активний користувач
-                    </label>
-                </div>
-                
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeUserModal()">❌ Скасувати</button>
-                    <button type="submit" class="btn btn-success" id="save-user-btn">💾 Зберегти</button>
-                </div>
-            </form>
+            <div class="modal-body">
+                <form id="user-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="username">Ім'я користувача *</label>
+                            <input type="text" id="username" name="username" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="last_name">Прізвище</label>
+                            <input type="text" id="last_name" name="last_name">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="phone">Телефон</label>
+                            <input type="tel" id="phone" name="phone">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="role">Роль *</label>
+                        <select id="role" name="role" required>
+                            <option value="">Оберіть роль...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group" id="password-group">
+                        <label for="password">Пароль *</label>
+                        <input type="password" id="password" name="password" required>
+                        <small>Мінімум 6 символів</small>
+                    </div>
+                    
+                    <!-- Секція зміни пароля для редагування -->
+                    <div id="password-change-section" class="password-section" style="display: none;">
+                        <h4>🔐 Зміна пароля</h4>
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="change-password" onchange="togglePasswordChange()">
+                                Змінити пароль користувача
+                            </label>
+                        </div>
+                        <div id="new-password-fields" style="display: none;">
+                            <div class="form-group">
+                                <label for="new-password">Новий пароль</label>
+                                <input type="password" id="new-password" name="new-password">
+                                <small>Мінімум 6 символів</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="confirm-password">Підтвердіть пароль</label>
+                                <input type="password" id="confirm-password" name="confirm-password">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="active" name="active" checked>
+                            Активний користувач
+                        </label>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeUserModal()">❌ Скасувати</button>
+                        <button type="submit" class="btn btn-success" id="save-user-btn">💾 Зберегти</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
     
@@ -622,6 +814,7 @@
                     <thead>
                         <tr>
                             <th>Користувач</th>
+                            <th>Прізвище</th>
                             <th>Email</th>
                             <th>Телефон</th>
                             <th>Роль</th>
@@ -637,6 +830,7 @@
                                     <strong>${user.username}</strong>
                                     ${user.id === 1 ? '<br><small>🔑 Системний адміністратор</small>' : ''}
                                 </td>
+                                <td>${user.last_name || '-'}</td>
                                 <td>${user.email || '-'}</td>
                                 <td>${user.phone || '-'}</td>
                                 <td>
@@ -751,6 +945,7 @@
             document.getElementById('modal-title').textContent = 'Додати користувача';
             document.getElementById('user-form').reset();
             document.getElementById('password-group').style.display = 'block';
+            document.getElementById('password-change-section').style.display = 'none';
             document.getElementById('password').required = true;
             document.getElementById('active').checked = true;
             document.getElementById('user-modal').style.display = 'block';
@@ -763,18 +958,36 @@
             editingUserId = userId;
             document.getElementById('modal-title').textContent = 'Редагувати користувача';
             document.getElementById('username').value = user.username;
+            document.getElementById('last_name').value = user.last_name || '';
             document.getElementById('email').value = user.email || '';
             document.getElementById('phone').value = user.phone || '';
             document.getElementById('role').value = user.role;
             document.getElementById('active').checked = user.active;
             document.getElementById('password-group').style.display = 'none';
+            document.getElementById('password-change-section').style.display = 'block';
             document.getElementById('password').required = false;
+            document.getElementById('change-password').checked = false;
+            document.getElementById('new-password-fields').style.display = 'none';
             document.getElementById('user-modal').style.display = 'block';
         }
-        
-        function closeUserModal() {
-            document.getElementById('user-modal').style.display = 'none';
-            editingUserId = null;
+
+        function togglePasswordChange() {
+            const checkbox = document.getElementById('change-password');
+            const fields = document.getElementById('new-password-fields');
+            const newPassword = document.getElementById('new-password');
+            const confirmPassword = document.getElementById('confirm-password');
+            
+            if (checkbox.checked) {
+                fields.style.display = 'block';
+                newPassword.required = true;
+                confirmPassword.required = true;
+            } else {
+                fields.style.display = 'none';
+                newPassword.required = false;
+                confirmPassword.required = false;
+                newPassword.value = '';
+                confirmPassword.value = '';
+            }
         }
         
         async function toggleUser(userId, currentStatus) {
@@ -870,14 +1083,41 @@
             const formData = new FormData(this);
             const userData = {
                 username: formData.get('username'),
+                last_name: formData.get('last_name') || null,
                 email: formData.get('email') || null,
                 phone: formData.get('phone') || null,
                 role: formData.get('role'),
                 active: formData.get('active') === 'on'
             };
             
+            // Обробка паролів
             if (!editingUserId) {
+                // Новий користувач
                 userData.password = formData.get('password');
+            } else {
+                // Редагування користувача
+                const changePassword = document.getElementById('change-password').checked;
+                if (changePassword) {
+                    const newPassword = document.getElementById('new-password').value;
+                    const confirmPassword = document.getElementById('confirm-password').value;
+                    
+                    if (!newPassword) {
+                        showUserError('Введіть новий пароль');
+                        return;
+                    }
+                    
+                    if (newPassword.length < 6) {
+                        showUserError('Пароль має бути не менше 6 символів');
+                        return;
+                    }
+                    
+                    if (newPassword !== confirmPassword) {
+                        showUserError('Паролі не співпадають');
+                        return;
+                    }
+                    
+                    userData.password = newPassword;
+                }
             }
             
             try {

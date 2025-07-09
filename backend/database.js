@@ -507,38 +507,70 @@ const writeoffQueries = {
         db.serialize(() => {
             db.run('BEGIN TRANSACTION');
             
-            // Отримуємо інформацію про товар
-            db.get("SELECT stock_pieces FROM products WHERE id = ?", [product_id], (err, prod) => {
+            // 1. Створюємо запис списання
+            db.run(`INSERT INTO writeoffs (product_id, writeoff_date, total_quantity, reason, responsible, notes)
+                    VALUES (?, ?, ?, ?, ?, ?)`,
+                   [product_id, writeoff_date || new Date().toISOString().split('T')[0], total_quantity, reason, responsible, notes],
+                   function(err) {
                 if (err) {
                     db.run('ROLLBACK');
                     return reject(err);
                 }
-                let newStock = prod ? prod.stock_pieces - total_quantity : 0;
-                if (newStock < 0) newStock = 0;
-                db.run(`UPDATE products 
-                    SET stock_pieces = ?, 
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ?`, 
-                    [newStock, product_id], (err) => {
+                
+                const writeoffId = this.lastID;
+                
+                // 2. Отримуємо інформацію про товар для обчислення boxes
+                db.get("SELECT stock_pieces, pieces_per_box FROM products WHERE id = ?", [product_id], (err, product) => {
                     if (err) {
                         db.run('ROLLBACK');
                         return reject(err);
                     }
-                    // 3. Створюємо запис руху (загальне списання без партії)
-                    db.run(`INSERT INTO stock_movements 
-                        (product_id, movement_type, pieces, boxes, reason, user, batch_id, batch_date)
-                        VALUES (?, 'WRITEOFF', ?, ?, ?, ?, NULL, NULL)`,
-                        [product_id, -total_quantity, -boxes_quantity, 
-                        `Списання: ${reason}`, responsible], (err) => {
+                    
+                    const pieces_per_box = product ? product.pieces_per_box || 1 : 1;
+                    const boxes_quantity = Math.floor(total_quantity / pieces_per_box);
+                    const pieces_quantity = total_quantity % pieces_per_box;
+                    
+                    // 3. Оновлюємо залишки товару
+                    let newStock = product ? product.stock_pieces - total_quantity : 0;
+                    if (newStock < 0) newStock = 0;
+                    
+                    db.run(`UPDATE products 
+                        SET stock_pieces = ?, 
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE id = ?`, 
+                        [newStock, product_id], (err) => {
                         if (err) {
                             db.run('ROLLBACK');
                             return reject(err);
                         }
-                        db.run('COMMIT');
-                        resolve({ 
-                            id: writeoffId,
-                            boxes_quantity,
-                            pieces_quantity
+                        
+                        // 4. Оновлюємо writeoff з обчисленими boxes/pieces
+                        db.run(`UPDATE writeoffs 
+                            SET boxes_quantity = ?, pieces_quantity = ?
+                            WHERE id = ?`, 
+                            [boxes_quantity, pieces_quantity, writeoffId], (err) => {
+                            if (err) {
+                                db.run('ROLLBACK');
+                                return reject(err);
+                            }
+                            
+                            // 5. Створюємо запис руху
+                            db.run(`INSERT INTO stock_movements 
+                                (product_id, movement_type, pieces, boxes, reason, user, batch_id, batch_date)
+                                VALUES (?, 'WRITEOFF', ?, ?, ?, ?, NULL, NULL)`,
+                                [product_id, -total_quantity, -boxes_quantity, 
+                                `Списання: ${reason}`, responsible], (err) => {
+                                if (err) {
+                                    db.run('ROLLBACK');
+                                    return reject(err);
+                                }
+                                db.run('COMMIT');
+                                resolve({ 
+                                    id: writeoffId,
+                                    boxes_quantity,
+                                    pieces_quantity
+                                });
+                            });
                         });
                     });
                 });

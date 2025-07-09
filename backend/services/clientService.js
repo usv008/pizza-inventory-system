@@ -204,19 +204,32 @@ class ClientService {
         this._checkInitialization();
         
         try {
-            const { name, phone, email, active = true, limit = 50, offset = 0 } = searchParams;
+            const { name, phone, email } = searchParams;
             
-            const clients = await this.clientQueries.search({
-                name: name || null,
-                phone: phone || null,
-                email: email || null,
-                active: active,
-                limit: parseInt(limit),
-                offset: parseInt(offset)
-            });
+            // Отримуємо всіх клієнтів та фільтруємо
+            const allClients = await this.clientQueries.getAll();
+            let filteredClients = allClients;
             
-            console.log(`🔍 Пошук клієнтів: знайдено ${clients.length} результатів`);
-            return clients;
+            if (name) {
+                filteredClients = filteredClients.filter(client => 
+                    client.name && client.name.toLowerCase().includes(name.toLowerCase())
+                );
+            }
+            
+            if (phone) {
+                filteredClients = filteredClients.filter(client => 
+                    client.phone && client.phone.includes(phone)
+                );
+            }
+            
+            if (email) {
+                filteredClients = filteredClients.filter(client => 
+                    client.email && client.email.toLowerCase().includes(email.toLowerCase())
+                );
+            }
+            
+            console.log(`🔍 Пошук клієнтів: знайдено ${filteredClients.length} результатів`);
+            return filteredClients;
         } catch (error) {
             console.error('❌ Помилка пошуку клієнтів:', error);
             throw new DatabaseError(`Помилка пошуку клієнтів: ${error.message}`);
@@ -228,7 +241,8 @@ class ClientService {
      */
     async _findClientByName(name) {
         try {
-            return await this.clientQueries.getByName(name);
+            const clients = await this.clientQueries.getAll();
+            return clients.find(client => client.name === name);
         } catch (error) {
             console.warn('Попередження при пошуку клієнта за назвою:', error.message);
             return null;
@@ -263,18 +277,18 @@ class ClientService {
         
         try {
             const allClients = await this.clientQueries.getAll();
-            const activeClients = allClients.filter(c => c.active);
+            const activeClients = allClients.filter(c => c.is_active);
             
             const stats = {
-                total_clients: allClients.length,
-                active_clients: activeClients.length,
-                inactive_clients: allClients.length - activeClients.length,
+                total: allClients.length,
+                active: activeClients.length,
+                inactive: allClients.length - activeClients.length,
                 clients_with_phone: activeClients.filter(c => c.phone && c.phone.trim()).length,
                 clients_with_email: activeClients.filter(c => c.email && c.email.trim()).length,
                 clients_with_address: activeClients.filter(c => c.address && c.address.trim()).length
             };
             
-            console.log(`📊 Статистика клієнтів: ${stats.active_clients} активних з ${stats.total_clients}`);
+            console.log(`📊 Статистика клієнтів: ${stats.active} активних з ${stats.total}`);
             return stats;
         } catch (error) {
             console.error('❌ Помилка отримання статистики клієнтів:', error);
@@ -283,5 +297,5 @@ class ClientService {
     }
 }
 
-// Експортуємо singleton instance
-module.exports = new ClientService(); 
+// Експортуємо клас
+module.exports = ClientService; 

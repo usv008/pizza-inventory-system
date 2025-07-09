@@ -230,40 +230,43 @@ router.get('/:id',
         try {
             const id = parseInt(req.params.id);
             
-            // Використовуємо приватний метод через створення тимчасового екземпляра
-            const { db } = require('../database');
+            // Використовуємо Supabase через MovementService
+            const { createClient } = require('@supabase/supabase-js');
+            const supabase = createClient(
+                process.env.SUPABASE_URL,
+                process.env.SUPABASE_SERVICE_ROLE_KEY
+            );
             
-            const movement = await new Promise((resolve, reject) => {
-                const sql = `
-                    SELECT 
-                        sm.id,
-                        sm.product_id,
-                        sm.movement_type,
-                        sm.pieces,
-                        sm.boxes,
-                        sm.reason,
-                        sm.user,
-                        sm.batch_id,
-                        sm.batch_date,
-                        sm.created_at,
-                        p.name as product_name,
-                        p.code as product_code
-                    FROM stock_movements sm
-                    JOIN products p ON sm.product_id = p.id
-                    WHERE sm.id = ?
-                `;
-                
-                db.get(sql, [id], (err, row) => {
-                    if (err) return reject(err);
-                    resolve(row);
-                });
-            });
+            const { data: movement, error } = await supabase
+                .from('stock_movements')
+                .select(`
+                    id,
+                    product_id,
+                    movement_type,
+                    pieces,
+                    boxes,
+                    reason,
+                    created_by,
+                    quantity,
+                    created_at,
+                    products!inner(name, code)
+                `)
+                .eq('id', id)
+                .single();
 
-            if (!movement) {
+            if (error || !movement) {
                 return res.status(404).json(formatError(`Рух з ID ${id} не знайдено`));
             }
 
-            res.json(formatResponse(movement, 'Рух товару отримано успішно'));
+            // Форматуємо відповідь для сумісності
+            const formattedMovement = {
+                ...movement,
+                user: movement.created_by,
+                product_name: movement.products?.name,
+                product_code: movement.products?.code
+            };
+
+            res.json(formatResponse(formattedMovement, 'Рух товару отримано успішно'));
         } catch (error) {
             next(error);
         }
@@ -293,28 +296,42 @@ router.get('/types', (req, res) => {
  */
 router.get('/summary', async (req, res, next) => {
     try {
-        const { db } = require('../database');
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+        );
         
-        const summary = await new Promise((resolve, reject) => {
-            const sql = `
-                SELECT 
-                    movement_type,
-                    COUNT(*) as count,
-                    SUM(pieces) as total_pieces,
-                    DATE(created_at) as movement_date
-                FROM stock_movements 
-                WHERE DATE(created_at) >= DATE('now', '-7 days')
-                GROUP BY movement_type
-                ORDER BY movement_type
-            `;
-            
-            db.all(sql, [], (err, rows) => {
-                if (err) return reject(err);
-                resolve(rows);
-            });
-        });
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        
+        const { data: summary, error } = await supabase
+            .from('stock_movements')
+            .select('movement_type, pieces, created_at')
+            .gte('created_at', sevenDaysAgo.toISOString());
 
-        res.json(formatResponse(summary, 'Звіт по рухах отримано успішно', {
+        if (error) {
+            throw error;
+        }
+
+        // Групуємо дані по типу руху
+        const groupedSummary = summary.reduce((acc, movement) => {
+            const type = movement.movement_type;
+            if (!acc[type]) {
+                acc[type] = {
+                    movement_type: type,
+                    count: 0,
+                    total_pieces: 0
+                };
+            }
+            acc[type].count += 1;
+            acc[type].total_pieces += movement.pieces || 0;
+            return acc;
+        }, {});
+
+        const formattedSummary = Object.values(groupedSummary);
+
+        res.json(formatResponse(formattedSummary, 'Звіт по рухах отримано успішно', {
             period: 'last_7_days',
             generated_at: new Date().toISOString()
         }));

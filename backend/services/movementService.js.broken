@@ -1,0 +1,498 @@
+/**
+ * Movement Service - Supabase Migration
+ * Простий сервіс для роботи з рухами товарів через Supabase
+ */
+
+const { createClient } = require('@supabase/supabase-js');
+
+let supabase;
+let productQueries, OperationsLogController;
+
+const MovementService = {
+    // Ініціалізація сервісу з залежностями
+    initialize(dependencies) {
+        if (!supabase) {
+            supabase = createClient(
+                process.env.SUPABASE_URL,
+                process.env.SUPABASE_SERVICE_ROLE_KEY
+            );
+        }
+        
+        productQueries = dependencies.productQueries;
+        OperationsLogController = dependencies.OperationsLogController;
+        console.log('✅ MovementService ініціалізовано з Supabase');
+    },
+
+    // Отримання всіх рухів з фільтрацією
+    async getAllMovements(filters = {}) {
+        try {
+            if (!supabase) {
+                throw new Error('MovementService не ініціалізовано');
+            }
+
+            let query = supabase
+                .from('stock_movements')
+                .select(`
+                    *,
+                    products:product_id (
+                        id,
+                        name,
+                        code
+                    )
+                `)
+                .order('created_at', { ascending: false });
+
+            // Застосовуємо фільтри
+            if (filters.product_id) {
+                query = query.eq('product_id', parseInt(filters.product_id));
+            }
+            
+            if (filters.movement_type && filters.movement_type !== 'ALL') {
+                query = query.eq('movement_type', filters.movement_type);
+            }
+            
+            if (filters.date_from) {
+                query = query.gte('created_at', filters.date_from);
+            }
+            
+            if (filters.date_to) {
+                query = query.lte('created_at', filters.date_to);
+            }
+            
+            if (filters.user) {
+                query = query.ilike('user', `%${filters.user}%`);
+            }
+
+            // Ліміт та offset
+            const limit = filters.limit ? parseInt(filters.limit) : 200;
+            const offset = filters.offset ? parseInt(filters.offset) : 0;
+            
+            if (offset > 0) {
+                query = query.range(offset, offset + limit - 1);
+            } else {
+                query = query.limit(limit);
+            }
+
+            const { data: movements, error } = await query;
+            
+            if (error) {
+                throw new Error(`Помилка отримання рухів: ${error.message}`);
+            }
+            
+            return {
+                success: true,
+                data: movements || [],
+                pagination: {
+                    limit,
+                    offset,
+                    count: movements ? movements.length : 0
+                },
+                filters: filters
+            };
+        } catch (error) {
+            console.error('[MovementService.getAllMovements] Помилка:', error);
+            throw error;
+        }
+    },
+
+    // Створення нового руху товару
+    async createMovement(movementData, requestInfo = {}) {
+        try {
+            if (!supabase) {
+                throw new Error('MovementService не ініціалізовано');
+            }
+
+            const { product_id, movement_type, pieces, boxes, reason, user = 'system', batch_id, batch_date } = movementData;
+
+            // Перевіряємо чи існує товар
+            const { data: product, error: productError } = await supabase
+                .from('products')
+                .select('*')
+                .eq('id', product_id)
+                .single();
+
+            if (productError || !product) {
+                throw new Error(`Товар з ID ${product_id} не знайдено`);
+            }
+
+            // Для OUT рухів перевіряємо наявність товару
+            if (movement_type === 'OUT' || movement_type === 'WRITEOFF') {
+                if (product.stock_pieces < pieces) {
+                    throw new Error(`Недостатньо товару на складі. Наявно: ${product.stock_pieces}, потрібно: ${pieces}`);
+                }
+            }
+
+            // Створюємо рух в базі
+            const { data: newMovement, error: createError } = await supabase
+                .from('stock_movements')
+                .insert({
+                    product_id,
+                    movement_type,
+                    pieces,
+                    boxes,
+                    reason,
+                    user,
+                    batch_id,
+                    batch_date
+                })
+                .select(`
+                    *,
+                    products:product_id (
+                        id,
+                        name,
+                        code
+                    )
+                `)
+                .single();
+
+            if (createError) {
+                throw new Error(`Помилка створення руху: ${createError.message}`);
+            }
+
+            // Оновлюємо залишки товару
+            await this._updateProductStock(product_id, movement_type, pieces);
+
+            // Логуємо операцію
+            await this._logMovementOperation('CREATE', newMovement, requestInfo);
+
+            return {
+                success: true,
+                data: newMovement,
+                message: `Рух товару створено успішно`
+            };
+        } catch (error) {
+            console.error('[MovementService.createMovement] Помилка:', error);
+            throw error;
+        }
+    },
+
+    // Оновлення руху (обмежене - тільки reason та user)
+    async updateMovement(id, updateData, requestInfo = {}) {
+        try {
+            if (!supabase) {
+                throw new Error('MovementService не ініціалізовано');
+            }
+
+            // Отримуємо поточний рух
+            const { data: currentMovement, error: getError } = await supabase
+                .from('stock_movements')
+                .select(`
+                    *,
+                    products:product_id (
+                        id,
+                        name,
+                        code
+                    )
+                `)
+                .eq('id', id)
+                .single();
+
+            if (getError || !currentMovement) {
+                throw new Error(`Рух з ID ${id} не знайдено`);
+            }
+
+            // Оновлюємо тільки дозволені поля
+            const allowedFields = ['reason', 'user'];
+            const updateFields = {};
+            
+            for (const field of allowedFields) {
+                if (updateData[field] !== undefined) {
+                    updateFields[field] = updateData[field];
+                }
+            }
+
+            if (Object.keys(updateFields).length === 0) {
+                throw new Error('Немає полів для оновлення');
+            }
+
+            updateFields.updated_at = new Date().toISOString();
+
+            const { data: updatedMovement, error: updateError } = await supabase
+                .from('stock_movements')
+                .update(updateFields)
+                .eq('id', id)
+                .select(`
+                    *,
+                    products:product_id (
+                        id,
+                        name,
+                        code
+                    )
+                `)
+                .single();
+
+            if (updateError) {
+                throw new Error(`Помилка оновлення руху: ${updateError.message}`);
+            }
+
+            // Логуємо операцію
+            await this._logMovementOperation('UPDATE', updatedMovement, requestInfo, currentMovement);
+
+            return {
+                success: true,
+                data: updatedMovement,
+                message: 'Рух товару оновлено успішно'
+            };
+        } catch (error) {
+            console.error('[MovementService.updateMovement] Помилка:', error);
+            throw error;
+        }
+    },
+
+    // Отримання рухів для конкретного товару
+    async getMovementsByProduct(productId, filters = {}) {
+        try {
+            if (!supabase) {
+                throw new Error('MovementService не ініціалізовано');
+            }
+
+            // Перевіряємо чи існує товар
+            const { data: product, error: productError } = await supabase
+                .from('products')
+                .select('id')
+                .eq('id', productId)
+                .single();
+
+            if (productError || !product) {
+                throw new Error(`Товар з ID ${productId} не знайдено`);
+            }
+
+            // Додаємо product_id до фільтрів
+            const productFilters = { ...filters, product_id: productId };
+            
+            return await this.getAllMovements(productFilters);
+        } catch (error) {
+            console.error('[MovementService.getMovementsByProduct] Помилка:', error);
+            throw error;
+        }
+    },
+
+    // Статистика рухів товарів
+    async getMovementStatistics(options = {}) {
+        try {
+            if (!supabase) {
+                throw new Error('MovementService не ініціалізовано');
+            }
+
+            const { date_from, date_to, product_id } = options;
+
+            let query = supabase
+                .from('stock_movements')
+                .select('movement_type, pieces, boxes, created_at');
+
+            if (date_from) {
+                query = query.gte('created_at', date_from);
+            }
+            
+            if (date_to) {
+                query = query.lte('created_at', date_to);
+            }
+            
+            if (product_id) {
+                query = query.eq('product_id', product_id);
+            }
+
+            const { data: movements, error } = await query;
+
+            if (error) {
+                throw new Error(`Помилка отримання статистики: ${error.message}`);
+            }
+
+            // Обчислюємо статистику
+            const stats = {
+                total_movements: movements.length,
+                total_in: 0,
+                total_out: 0,
+                total_produced: 0,
+                total_writeoff: 0,
+                by_type: {}
+            };
+
+            movements.forEach(movement => {
+                const type = movement.movement_type;
+                
+                if (!stats.by_type[type]) {
+                    stats.by_type[type] = {
+                        count: 0,
+                        total_pieces: 0,
+                        total_boxes: 0
+                    };
+                }
+                
+                stats.by_type[type].count++;
+                stats.by_type[type].total_pieces += movement.pieces || 0;
+                stats.by_type[type].total_boxes += movement.boxes || 0;
+
+                switch (type) {
+                    case 'IN':
+                        stats.total_in += movement.pieces || 0;
+                        break;
+                    case 'OUT':
+                        stats.total_out += movement.pieces || 0;
+                        break;
+                    case 'PRODUCTION':
+                        stats.total_produced += movement.pieces || 0;
+                        break;
+                    case 'WRITEOFF':
+                        stats.total_writeoff += movement.pieces || 0;
+                        break;
+                }
+            });
+
+            return {
+                success: true,
+                data: stats
+            };
+        } catch (error) {
+            console.error('[MovementService.getMovementStatistics] Помилка:', error);
+            throw error;
+        }
+    },
+
+    // Видалення руху (обережно - впливає на залишки)
+    async deleteMovement(id, requestInfo = {}) {
+        try {
+            if (!supabase) {
+                throw new Error('MovementService не ініціалізовано');
+            }
+
+            // Отримуємо рух перед видаленням
+            const { data: movement, error: getError } = await supabase
+                .from('stock_movements')
+                .select(`
+                    *,
+                    products:product_id (
+                        id,
+                        name,
+                        code
+                    )
+                `)
+                .eq('id', id)
+                .single();
+
+            if (getError || !movement) {
+                throw new Error(`Рух з ID ${id} не знайдено`);
+            }
+
+            // Видаляємо рух
+            const { error: deleteError } = await supabase
+                .from('stock_movements')
+                .delete()
+                .eq('id', id);
+
+            if (deleteError) {
+                throw new Error(`Помилка видалення руху: ${deleteError.message}`);
+            }
+
+            // Відновлюємо залишки товару (reverse operation)
+            const reverseType = movement.movement_type === 'IN' ? 'OUT' : 'IN';
+            await this._updateProductStock(movement.product_id, reverseType, movement.pieces);
+
+            // Логуємо операцію
+            await this._logMovementOperation('DELETE', movement, requestInfo);
+
+            return {
+                success: true,
+                message: 'Рух товару видалено успішно'
+            };
+        } catch (error) {
+            console.error('[MovementService.deleteMovement] Помилка:', error);
+            throw error;
+        }
+    },
+
+    // Приватні методи
+    async _updateProductStock(productId, movementType, pieces) {
+        try {
+            // Отримуємо поточні залишки
+            const { data: product, error: getError } = await supabase
+                .from('products')
+                .select('stock_pieces')
+                .eq('id', productId)
+                .single();
+
+            if (getError || !product) {
+                throw new Error(`Товар з ID ${productId} не знайдено`);
+            }
+
+            let newStock = product.stock_pieces;
+
+            // Обчислюємо нові залишки
+            switch (movementType) {
+                case 'IN':
+                case 'PRODUCTION':
+                    newStock += pieces;
+                    break;
+                case 'OUT':
+                case 'WRITEOFF':
+                    newStock -= pieces;
+                    break;
+            }
+
+            // Не дозволяємо негативні залишки
+            if (newStock < 0) {
+                newStock = 0;
+            }
+
+            // Оновлюємо залишки
+            const { error: updateError } = await supabase
+                .from('products')
+                .update({
+                    stock_pieces: newStock,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', productId);
+
+            if (updateError) {
+                throw new Error(`Помилка оновлення залишків: ${updateError.message}`);
+            }
+        } catch (error) {
+            console.error('[MovementService._updateProductStock] Помилка:', error);
+            throw error;
+        }
+    },
+
+    async _logMovementOperation(operation, movementData, requestInfo, oldData = null) {
+        try {
+            if (!OperationsLogController) return;
+
+            const logEntry = {
+                operation: operation,
+                table_name: 'stock_movements',
+                record_id: movementData.id,
+                old_values: oldData || null,
+                new_values: movementData,
+                changed_by: requestInfo.user || 'system',
+                operation_details: {
+                    operation_type: operation,
+                    movement_type: movementData.movement_type,
+                    product_id: movementData.product_id,
+                    pieces: movementData.pieces,
+                    description: this._getOperationDescription(operation, movementData)
+                }
+            };
+
+            await OperationsLogController.logOperation(logEntry);
+        } catch (error) {
+            console.error('[MovementService._logMovementOperation] Помилка логування:', error);
+            // Не викидаємо помилку, щоб не зупинити основну операцію
+        }
+    },
+
+    _getOperationDescription(operation, movementData) {
+        const productName = movementData.products ? movementData.products.name : `ID: ${movementData.product_id}`;
+        
+        switch (operation) {
+            case 'CREATE':
+                return `Створено рух товару ${productName}: ${movementData.movement_type} ${movementData.pieces} шт.`;
+            case 'UPDATE':
+                return `Оновлено рух товару ${productName}`;
+            case 'DELETE':
+                return `Видалено рух товару ${productName}: ${movementData.movement_type} ${movementData.pieces} шт.`;
+            default:
+                return `Операція ${operation} з рухом товару ${productName}`;
+        }
+    }
+};
+
+module.exports = MovementService;

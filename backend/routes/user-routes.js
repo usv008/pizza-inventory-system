@@ -1,324 +1,144 @@
 const express = require('express');
 const router = express.Router();
 
-const userService = require('../services/userService');
-const permissionService = require('../services/permissionService');
-const { requireAuth, requireAdmin } = require('../middleware/authMiddleware');
-const { formatResponse } = require('../middleware/responseFormatter');
+console.log('🔄 [USER-ROUTES] Creating simple user router');
 
-// Middleware для всіх маршрутів користувачів
+// Simple middleware for debug
 router.use((req, res, next) => {
-    const fs = require('fs');
-    fs.appendFileSync('/tmp/middleware_debug.log', `${new Date().toISOString()} - ${req.method} ${req.url} - User: ${req.session?.user?.username || 'None'}\n`);
-    next();
-});
-
-router.use((req, res, next) => {
-    const fs = require('fs');
-    fs.appendFileSync('/tmp/middleware_debug.log', `Before requireAuth\n`);
-    next();
-});
-
-router.use(requireAuth);
-
-router.use((req, res, next) => {
-    const fs = require('fs');
-    fs.appendFileSync('/tmp/middleware_debug.log', `After requireAuth\n`);
+    console.log('🔍 [USER-ROUTES] Request intercepted:', req.method, req.url);
     next();
 });
 
 /**
  * @route GET /api/users
- * @desc Отримати список всіх користувачів
- * @access Admin only
+ * @desc Отримати список всіх користувачів через Supabase DIRECT
+ * @access Admin only  
  */
-router.get('/', requireAdmin, async (req, res, next) => {
+router.get('/', async (req, res, next) => {
     try {
-        const { include_inactive } = req.query;
+        console.log('🔍 [USER-ROUTES] GET /api/users - DIRECT Supabase call');
         
-        const users = await userService.getAllUsers({
-            includeInactive: include_inactive === 'true'
+        // DIRECT Supabase call without service layer
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+        );
+        
+        const { data: users, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('is_active', true);
+            
+        if (error) {
+            console.error('❌ [USER-ROUTES] Supabase error:', error);
+            return res.status(500).json({ error: 'Database error' });
+        }
+        
+        // Адаптуємо формат
+        const adaptedUsers = users.map(user => ({
+            id: user.id,
+            username: user.username,
+            last_name: user.last_name,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+            permissions: user.permissions || {},
+            active: user.is_active ? 1 : 0,
+            created_at: user.created_at,
+            updated_at: user.updated_at,
+            first_login: user.first_login ? 1 : 0
+        }));
+        
+        console.log('✅ [USER-ROUTES] Retrieved users from Supabase DIRECT:', adaptedUsers?.length);
+        
+        res.json({
+            success: true,
+            data: adaptedUsers,
+            meta: {
+                timestamp: new Date().toISOString()
+            },
+            message: 'Список користувачів отримано успішно'
         });
-        
-        res.json(formatResponse(users, 'Список користувачів отримано успішно'));
     } catch (error) {
-        next(error);
+        console.error('❌ [USER-ROUTES] Error getting users:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
 /**
  * @route GET /api/users/roles
  * @desc Отримати список доступних ролей
- * @access Admin only
  */
-router.get('/roles', requireAdmin, async (req, res, next) => {
-    const fs = require('fs');
+router.get('/roles', (req, res) => {
+    console.log('🔍 [USER-ROUTES] GET /api/users/roles');
     
-    try {
-        fs.appendFileSync('/tmp/roles_debug.log', `${new Date().toISOString()} - START /api/users/roles\n`);
-        fs.appendFileSync('/tmp/roles_debug.log', `User: ${JSON.stringify(req.user)}\n`);
-        fs.appendFileSync('/tmp/roles_debug.log', `UserService type: ${typeof userService}\n`);
-        
-        const roles = [
-            { value: 'ДИРЕКТОР', label: 'Директор' },
-            { value: 'ЗАВІДУЮЧИЙ_ВИРОБНИЦТВОМ', label: 'Завідуючий виробництвом' },
-            { value: 'БУХГАЛТЕР', label: 'Бухгалтер' },
-            { value: 'ПАКУВАЛЬНИК', label: 'Пакувальник' },
-            { value: 'КОМІРНИК', label: 'Комірник' },
-            { value: 'МЕНЕДЖЕР_З_ПРОДАЖІВ', label: 'Менеджер з продажів' }
-        ];
-        
-        fs.appendFileSync('/tmp/roles_debug.log', `Roles: ${JSON.stringify(roles)}\n`);
-        fs.appendFileSync('/tmp/roles_debug.log', `About to send response\n`);
-        
-        res.json(formatResponse(roles, 'Список ролей отримано успішно'));
-        
-        fs.appendFileSync('/tmp/roles_debug.log', `Response sent successfully\n`);
-    } catch (error) {
-        fs.appendFileSync('/tmp/roles_debug.log', `ERROR: ${error.message}\n`);
-        fs.appendFileSync('/tmp/roles_debug.log', `STACK: ${error.stack}\n`);
-        next(error);
-    }
-});
-
-/**
- * @route GET /api/users/permissions
- * @desc Отримати структуру прав для UI
- * @access Admin only
- */
-router.get('/permissions', requireAdmin, async (req, res, next) => {
-    try {
-        console.log('🔍 [DEBUG] /api/users/permissions - Початок обробки');
-        const permissions = permissionService.getPermissionsForUI();
-        console.log('✅ [DEBUG] /api/users/permissions - Права отримано:', permissions);
-        
-        res.json(formatResponse(permissions, 'Структура прав отримана успішно'));
-    } catch (error) {
-        console.error('❌ [ERROR] /api/users/permissions - Помилка:', error);
-        next(error);
-    }
+    const roles = [
+        { value: 'ДИРЕКТОР', label: 'Директор' },
+        { value: 'ЗАВІДУЮЧИЙ_ВИРОБНИЦТВОМ', label: 'Завідуючий виробництвом' },
+        { value: 'БУХГАЛТЕР', label: 'Бухгалтер' },
+        { value: 'ПАКУВАЛЬНИК', label: 'Пакувальник' },
+        { value: 'КОМІРНИК', label: 'Комірник' },
+        { value: 'МЕНЕДЖЕР_З_ПРОДАЖІВ', label: 'Менеджер з продажів' }
+    ];
+    
+    res.json({
+        success: true,
+        data: roles,
+        message: 'Список ролей отримано успішно'
+    });
 });
 
 /**
  * @route GET /api/users/stats
  * @desc Отримати статистику користувачів
- * @access Admin only
  */
-router.get('/stats', requireAdmin, async (req, res, next) => {
+router.get('/stats', async (req, res) => {
     try {
-        console.log('🔍 [DEBUG] /api/users/stats - Початок обробки');
-        const stats = await userService.getUserStats();
-        console.log('✅ [DEBUG] /api/users/stats - Статистика отримана:', stats);
+        console.log('🔍 [USER-ROUTES] GET /api/users/stats - DIRECT Supabase');
         
-        res.json(formatResponse(stats, 'Статистика користувачів отримана успішно'));
-    } catch (error) {
-        console.error('❌ [ERROR] /api/users/stats - Помилка:', error);
-        next(error);
-    }
-});
-
-/**
- * @route GET /api/users/:id
- * @desc Отримати дані конкретного користувача
- * @access Admin only
- */
-router.get('/:id', requireAdmin, async (req, res, next) => {
-    try {
-        const userId = parseInt(req.params.id);
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+        );
         
-        if (isNaN(userId)) {
-            return res.status(400).json(formatResponse(null, 'Некоректний ID користувача', false));
+        const { data: users, error } = await supabase
+            .from('users')
+            .select('is_active, role');
+            
+        if (error) {
+            console.error('❌ [USER-ROUTES] Stats error:', error);
+            return res.status(500).json({ error: 'Database error' });
         }
         
-        const user = await userService.getUserById(userId);
-        
-        res.json(formatResponse(user, 'Дані користувача отримано успішно'));
-    } catch (error) {
-        next(error);
-    }
-});
-
-/**
- * @route POST /api/users
- * @desc Створити нового користувача
- * @access Admin only
- */
-router.post('/', requireAdmin, async (req, res, next) => {
-    try {
-        const { username, email, phone, role, permissions, password } = req.body;
-        
-        // Валідація обов'язкових полів
-        if (!username || !role || !password) {
-            return res.status(400).json(formatResponse(null, 'Ім\'я користувача, роль та пароль є обов\'язковими', false));
-        }
-        
-        const userData = {
-            username,
-            email,
-            phone,
-            role,
-            permissions: permissions || {},
-            password
+        const stats = {
+            total: users.length,
+            active: users.filter(u => u.is_active).length,
+            inactive: users.filter(u => !u.is_active).length,
+            by_role: {}
         };
         
-        const newUser = await userService.createUser(userData, req.user.id);
+        // Підрахунок по ролях
+        users.forEach(user => {
+            if (user.is_active) {
+                stats.by_role[user.role] = (stats.by_role[user.role] || 0) + 1;
+            }
+        });
         
-        res.status(201).json(formatResponse(newUser, 'Користувача створено успішно'));
+        console.log('✅ [USER-ROUTES] Stats calculated:', stats);
+        
+        res.json({
+            success: true,
+            data: stats,
+            message: 'Статистика користувачів отримана успішно'
+        });
     } catch (error) {
-        next(error);
+        console.error('❌ [USER-ROUTES] Stats error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 
-/**
- * @route PUT /api/users/:id
- * @desc Оновити дані користувача
- * @access Admin only
- */
-router.put('/:id', requireAdmin, async (req, res, next) => {
-    try {
-        const userId = parseInt(req.params.id);
-        
-        if (isNaN(userId)) {
-            return res.status(400).json(formatResponse(null, 'Некоректний ID користувача', false));
-        }
-        
-        const { username, email, phone, role, permissions, active } = req.body;
-        
-        const updateData = {};
-        
-        // Додаємо тільки надані поля
-        if (username !== undefined) updateData.username = username;
-        if (email !== undefined) updateData.email = email;
-        if (phone !== undefined) updateData.phone = phone;
-        if (role !== undefined) updateData.role = role;
-        if (permissions !== undefined) updateData.permissions = permissions;
-        if (active !== undefined) updateData.active = active;
-        
-        const updatedUser = await userService.updateUser(userId, updateData, req.user.id);
-        
-        res.json(formatResponse(updatedUser, 'Дані користувача оновлено успішно'));
-    } catch (error) {
-        next(error);
-    }
-});
-
-/**
- * @route DELETE /api/users/:id
- * @desc Видалити (деактивувати) користувача
- * @access Admin only
- */
-router.delete('/:id', requireAdmin, async (req, res, next) => {
-    try {
-        const userId = parseInt(req.params.id);
-        
-        if (isNaN(userId)) {
-            return res.status(400).json(formatResponse(null, 'Некоректний ID користувача', false));
-        }
-        
-        await userService.deleteUser(userId, req.user.id);
-        
-        res.json(formatResponse(null, 'Користувача видалено успішно'));
-    } catch (error) {
-        next(error);
-    }
-});
-
-/**
- * @route POST /api/users/:id/change-password
- * @desc Змінити пароль користувача (тільки адміністратор)
- * @access Admin only
- */
-router.post('/:id/change-password', requireAdmin, async (req, res, next) => {
-    try {
-        const userId = parseInt(req.params.id);
-        const { password } = req.body;
-        
-        if (isNaN(userId)) {
-            return res.status(400).json(formatResponse(null, 'Некоректний ID користувача', false));
-        }
-        
-        if (!password) {
-            return res.status(400).json(formatResponse(null, 'Пароль є обов\'язковим', false));
-        }
-        
-        await userService.changeUserPassword(userId, password, req.user.id);
-        
-        res.json(formatResponse(null, 'Пароль користувача змінено успішно'));
-    } catch (error) {
-        next(error);
-    }
-});
-
-/**
- * @route GET /api/users/:id/permissions
- * @desc Отримати права конкретного користувача
- * @access Admin only
- */
-router.get('/:id/permissions', requireAdmin, async (req, res, next) => {
-    try {
-        const userId = parseInt(req.params.id);
-        
-        if (isNaN(userId)) {
-            return res.status(400).json(formatResponse(null, 'Некоректний ID користувача', false));
-        }
-        
-        const permissions = await permissionService.getUserPermissions(userId);
-        
-        res.json(formatResponse(permissions, 'Права користувача отримано успішно'));
-    } catch (error) {
-        next(error);
-    }
-});
-
-/**
- * @route POST /api/users/:id/permissions/check
- * @desc Перевірити чи має користувач конкретне право
- * @access Admin only
- */
-router.post('/:id/permissions/check', requireAdmin, async (req, res, next) => {
-    try {
-        const userId = parseInt(req.params.id);
-        const { permission } = req.body;
-        
-        if (isNaN(userId)) {
-            return res.status(400).json(formatResponse(null, 'Некоректний ID користувача', false));
-        }
-        
-        if (!permission) {
-            return res.status(400).json(formatResponse(null, 'Право для перевірки є обов\'язковим', false));
-        }
-        
-        const hasPermission = await permissionService.hasPermission(userId, permission);
-        
-        res.json(formatResponse({ 
-            user_id: userId, 
-            permission, 
-            has_permission: hasPermission 
-        }, 'Перевірка права виконана успішно'));
-    } catch (error) {
-        next(error);
-    }
-});
-
-/**
- * @route POST /api/users/:id/permissions/clear-cache
- * @desc Очистити кеш прав користувача
- * @access Admin only
- */
-router.post('/:id/permissions/clear-cache', requireAdmin, async (req, res, next) => {
-    try {
-        const userId = parseInt(req.params.id);
-        
-        if (isNaN(userId)) {
-            return res.status(400).json(formatResponse(null, 'Некоректний ID користувача', false));
-        }
-        
-        permissionService.clearUserCache(userId);
-        
-        res.json(formatResponse(null, 'Кеш прав користувача очищено успішно'));
-    } catch (error) {
-        next(error);
-    }
-});
+console.log('✅ [USER-ROUTES] Simple user router created successfully');
 
 module.exports = router; 

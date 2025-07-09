@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
@@ -8,6 +10,7 @@ const { globalErrorHandler, notFoundHandler } = require('./middleware/errorHandl
 
 // Routes
 const productsRouter = require('./routes/products');
+const hybridProductsRouter = require('./routes/hybridProducts');
 const clientRoutes = require('./routes/client-routes');
 const orderRoutes = require('./routes/order-routes');
 const productionRoutes = require('./routes/production-routes');
@@ -23,14 +26,22 @@ const userRoutes = require('./routes/user-routes');
 
 // Services
 const productService = require('./services/productService');
-const clientService = require('./services/clientService');
-const orderService = require('./services/orderService');
-const productionService = require('./services/productionService');
+// Hybrid Product Service Migration - Phase 4
+const legacyProductService = require('./services/productService');
+const supabaseProductService = require('./services/supabaseProductService');
+const SupabaseClientService = require('./services/supabaseClientService'); // Переключаємо на Supabase
+let clientService = null; // Ініціалізуємо пізніше
+const SupabaseOrderService = require("./services/supabaseOrderService");
+const orderService = SupabaseOrderService;
+const SupabaseProductionService = require("./services/supabaseProductionService");
+const productionService = new SupabaseProductionService();
 const writeoffService = require('./services/writeoffService');
 const movementService = require('./services/movementService');
-const authService = require('./services/authService');
+const SupabaseAuthService = require('./services/supabaseAuthService');
+const authService = new SupabaseAuthService();
 const permissionService = require('./services/permissionService');
-const userService = require('./services/userService');
+const SupabaseUserService = require('./services/supabaseUserService');
+const userService = new SupabaseUserService();
 
 const app = express();
 const PORT = 3000;
@@ -101,27 +112,38 @@ try {
     initDatabase().then(() => {
         console.log('🚀 База даних готова до роботи');
         
+        // Створюємо Supabase client для сервісів
+        const { createClient } = require('@supabase/supabase-js');
+        const supabaseClient = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+        );
+        
         // Ініціалізуємо сервіси з залежностями
+        // Phase 4 Migration: Hybrid Product Service
+        supabaseProductService.initialize({
+            OperationsLogController
+        });
+        
+        // Legacy initialization (kept for fallback)
         productService.initialize({
             productQueries,
             OperationsLogController
         });
         
-        clientService.initialize({
-            clientQueries,
+        clientService = new SupabaseClientService(); // Створюємо інстанс класу
+        if (clientService && typeof clientService.initialize === "function") clientService.initialize({
             OperationsLogController
         });
         
-        orderService.initialize({
-            orderQueries,
-            productQueries,
-            clientQueries,
+        if (orderService && typeof orderService.initialize === "function") orderService.initialize({
             OperationsLogController
         });
         
-        productionService.initialize({
-            productionQueries,
-            productQueries,
+        if (productionService && typeof productionService.initialize === "function") productionService.initialize({
+            supabase: supabaseClient,
+            hybridProductService: supabaseProductService,
+            hybridAuditService: null, // TODO: add if needed
             OperationsLogController
         });
         
@@ -137,20 +159,16 @@ try {
             OperationsLogController
         });
         
-        authService.initialize({
-            userQueries,
-            sessionQueries,
-            auditQueries
-        });
+        authService.initialize();
         
         // Ініціалізуємо Permission Service
         permissionService.initialize();
         
-        // Ініціалізуємо User Service
-        userService.initialize({
-            userQueries,
-            auditQueries
-        });
+        // Ініціалізуємо User Service (Supabase)
+        console.log('🔄 [APP] About to initialize userService:', userService.constructor.name);
+        console.log('🔄 [APP] Is SupabaseUserService?', userService instanceof SupabaseUserService);
+        userService.initialize();
+        console.log('✅ [APP] UserService initialized successfully');
         
         // Ініціалізуємо PDF роути
         initPdfRoutes({
@@ -267,22 +285,51 @@ app.get('/api', (req, res) => {
 
 // Mount routes
 console.log('🔧 Mounting routes...');
-app.use('/api', productsRouter);
-console.log('✅ Products router mounted');
+
+// Debug middleware specifically for /api/users
+app.use('/api/users', (req, res, next) => {
+    console.log('🚨🚨🚨 [FORCED TEST] /api/users middleware triggered!');
+    console.log('🔍 [ROUTING] /api/users intercepted:', req.method, req.url);
+    console.log('🔍 [ROUTING] Headers:', Object.keys(req.headers));
+    console.log('🔍 [ROUTING] About to call userRoutes...');
+    
+    // Removed forced response - let real routes handle it
+    next();
+});
+
+// Mount specific routes BEFORE general /api routes
 app.use('/api/auth', authRoutes);
 console.log('✅ Auth router mounted');
 app.use('/api/users', userRoutes);
 console.log('✅ Users router mounted');
 app.use('/api/clients', clientRoutes);
+console.log('✅ Clients router mounted');
 app.use('/api/orders', orderRoutes);
+console.log('✅ Orders router mounted');
 app.use('/api/production', productionRoutes);
+console.log('✅ Production router mounted');
 app.use('/api/writeoffs', writeoffRoutes);
+console.log('✅ Writeoffs router mounted');
 app.use('/api/movements', movementRoutes);
-app.use(orderDocxRouter);
+console.log('✅ Movements router mounted');
+
+// Mount general /api routes AFTER specific routes
+app.use('/api', productsRouter);
+console.log('✅ Products router mounted');
+app.use('/api/hybrid', hybridProductsRouter);
+console.log('✅ Hybrid Products router mounted');
 app.use('/api', orderPdfRouter);
+console.log('✅ PDF router mounted');
 app.use('/api', batchRoutes);
+console.log('✅ Batch router mounted');
+
+// Mount other routes
+app.use(orderDocxRouter);
+console.log('✅ DOCX router mounted');
 app.use('/api/arrivals', arrivalRoutes);
+console.log('✅ Arrivals router mounted');
 app.use('/api/operations', operationsLogRoutes);
+console.log('✅ Operations log router mounted');
 
 // ================================
 // LEGACY ENDPOINTS (TEMPORARY)
