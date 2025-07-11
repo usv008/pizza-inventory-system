@@ -185,7 +185,7 @@ const logApiCall = (req, res, next) => {
 async function logApiCallAsync(req, statusCode, duration, success) {
     try {
         // Динамічно завантажуємо database щоб уникнути circular dependency
-        const database = require('../database');
+        const database = require('../supabase-database');
         if (database.auditQueries) {
             await database.auditQueries.logApiCall(
                 req.user ? req.user.id : null,

@@ -12,6 +12,27 @@
     <link rel="stylesheet" href="/styles/navigation.css">
     <link rel="stylesheet" href="/styles/batches.css">
     <link rel="stylesheet" href="styles/arrivals.css">
+    <style>
+/* Виправлення для показу партій */
+.batches-list {
+    max-height: none !important;
+    opacity: 1 !important;
+    display: block !important;
+    overflow: visible !important;
+}
+
+.batch-item {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    gap: 1rem !important;
+    align-items: center !important;
+    padding: 0.75rem !important;
+    margin-bottom: 0.5rem !important;
+    background: #f8f9fa !important;
+    border-radius: 8px !important;
+    border-left: 3px solid #28a745 !important;
+}
+</style>
     <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
 </head>
 <body>
@@ -410,16 +431,27 @@
             window.safeQuerySelector = window.errorHandler.safeQuerySelector.bind(window.errorHandler);
         }
         
-        const API_URL = '/api';
+        const API_URL = 'http://localhost:3000/api';
         let products = [];
         let productBatches = {}; // Кеш партій по товарах
 
         // Завантаження даних при відкритті сторінки
         document.addEventListener('DOMContentLoaded', async function() {
-            // Перевіряємо аутентифікацію
-            const isAuthenticated = await authManager.requireAuth();
-            if (isAuthenticated) {
-                initializePage();
+            // Чекаємо завершення завантаження authManager
+            if (typeof authManager === 'undefined') {
+                console.log('Waiting for authManager...');
+                setTimeout(async () => {
+                    const isAuthenticated = await authManager.requireAuth();
+                    if (isAuthenticated) {
+                        initializePage();
+                    }
+                }, 100);
+            } else {
+                // Перевіряємо аутентифікацію
+                const isAuthenticated = await authManager.requireAuth();
+                if (isAuthenticated) {
+                    initializePage();
+                }
             }
         });
 
@@ -904,11 +936,11 @@
                      const batchesData = await batchesResponse.json();
                      // Обробляємо null значення - коли товар без партій
                      totalStock = batchesData.reduce((sum, p) => {
-                         const available = p.total_available !== null && p.total_available !== undefined ? p.total_available : 0;
+                         const available = p.available_quantity !== null && p.available_quantity !== undefined ? p.available_quantity : 0;
                          return sum + available;
                      }, 0);
                      totalBoxes = batchesData.reduce((sum, p) => {
-                         const boxes = p.total_boxes !== null && p.total_boxes !== undefined ? p.total_boxes : 0;
+                         const boxes = Math.floor((p.available_quantity || 0) / (p.pieces_per_box || 1));
                          return sum + boxes;
                      }, 0);
                      totalBatches = batchesData.reduce((sum, p) => sum + (p.batches_count || 0), 0);
@@ -982,14 +1014,15 @@
                 const dateTime = timeStr ? `${dateStr}, ${timeStr}` : dateStr;
                 const expiryDate = new Date(item.expiry_date).toLocaleDateString('uk-UA');
                 
-                // Інформація про партію
-                const batchInfo = item.batch_date ? 
-                    `<span class="batch-status active">${item.batch_date}</span>` : 
+                // Інформація про партію - ВИПРАВЛЕНО для відображення партій
+                const batchInfo = item.production_date ? 
+                    `<span class="batch-status active">${new Date(item.production_date).toLocaleDateString('uk-UA')}</span>` : 
                     '<span style="color: #7f8c8d;">-</span>';
                 
-                const batchAvailable = item.batch_available !== undefined ? 
-                    `${item.batch_available} шт` : 
-                    '<span style="color: #7f8c8d;">-</span>';
+                // Показуємо доступну кількість з партії - якщо є batch_available_quantity використовуємо його, інакше загальну кількість
+                const batchAvailable = item.batch_available_quantity !== undefined ? 
+                    `${item.batch_available_quantity} шт` : 
+                    item.batch_id ? `${item.total_quantity} шт` : '<span style="color: #7f8c8d;">-</span>';
                 
                 row.innerHTML = `
                     <td>${dateTime}</td>
@@ -1035,27 +1068,30 @@
         }
 
         function showQuantityHint(total, boxes, piecesPerBox, pieces) {
-            let hint = safeQuerySelector('#quantity-hint');
-            if (!hint) {
-                hint = document.createElement('small');
-                hint.id = 'quantity-hint';
-                hint.style.cssText = 'color: #7f8c8d; display: block; margin-top: 0.25rem;';
-                const totalInput = safeQuerySelector('#prod-total');
-                if (totalInput && totalInput.parentNode) {
-                    totalInput.parentNode.appendChild(hint);
-                } else {
-                    return;
-                }
-            }
-            if (hint) {
-                hint.textContent = `${boxes} ящ + ${pieces} шт (по ${piecesPerBox} в ящ.)`;
+            // Спочатку видаляємо старий hint якщо є
+            removeQuantityHint();
+            
+            // Створюємо новий hint
+            const hint = document.createElement('small');
+            hint.id = 'quantity-hint';
+            hint.style.cssText = 'color: #7f8c8d; display: block; margin-top: 0.25rem;';
+            hint.textContent = `${boxes} ящ + ${pieces} шт (по ${piecesPerBox} в ящ.)`;
+            
+            const totalInput = safeQuerySelector('#prod-total');
+            if (totalInput && totalInput.parentNode) {
+                totalInput.parentNode.appendChild(hint);
             }
         }
 
         function removeQuantityHint() {
             const hint = safeQuerySelector('#quantity-hint');
             if (hint && hint.parentNode) {
-                hint.parentNode.removeChild(hint);
+                try {
+                    hint.parentNode.removeChild(hint);
+                } catch (error) {
+                    // Елемент вже видалено або не існує
+                    console.log('Quantity hint already removed or does not exist');
+                }
             }
         }
 
@@ -1143,16 +1179,18 @@
                 const row = document.createElement('tr');
                 const writeoffDate = new Date(item.writeoff_date).toLocaleDateString('uk-UA');
                 
-                // Інформація про партію
+                // Інформація про партію - ВИПРАВЛЕНО для відображення списань
                 const batchInfo = item.batch_date ? 
                     `<span class="batch-status expired">${new Date(item.batch_date).toLocaleDateString('uk-UA')}</span>` : 
+                    item.production_date ? 
+                    `<span class="batch-status expired">${new Date(item.production_date).toLocaleDateString('uk-UA')}</span>` :
                     '<span style="color: #7f8c8d;">Загальне</span>';
                 
                 row.innerHTML = `
                     <td>${writeoffDate}</td>
                     <td>${item.product_name} (${item.product_code})</td>
                     <td>${batchInfo}</td>
-                    <td style="color: #e74c3c; font-weight: bold;">-${item.total_quantity} шт</td>
+                    <td style="color: #e74c3c; font-weight: bold;">-${item.total_quantity || item.quantity} шт</td>
                     <td>${item.reason}</td>
                     <td>${item.responsible}</td>
                     <td>${item.notes || '-'}</td>
@@ -1179,8 +1217,8 @@
                 if (!response.ok) throw new Error('Помилка завантаження рухів');
                 
                 const result = await response.json();
-                // Обробляємо новий формат API відповіді
-                const movements = result.success ? result.data : result;
+                // Обробляємо новий формат API відповіді {success: true, data: [...]}
+                const movements = result.success ? result.data : (Array.isArray(result) ? result : []);
                 displayMovements(movements);
                 
                 if (loadingEl) loadingEl.style.display = 'none';
@@ -1361,7 +1399,7 @@ console.log('Raw batches data received:', batchesData.length, 'products');
         return sum + activeBatches.length;
     }, 0);
     
-    const totalQuantity = productsWithActiveBatches.reduce((sum, p) => sum + (p.total_available || 0), 0);
+    const totalQuantity = productsWithActiveBatches.reduce((sum, p) => sum + (p.available_quantity || 0), 0);
     
     console.log('Total active batches:', totalBatches);
     console.log('Total quantity:', totalQuantity);
@@ -1403,19 +1441,26 @@ console.log('Raw batches data received:', batchesData.length, 'products');
         if (hasExpiring) cardClass += ' has-expiring';
         
         const batchesListHTML = activeBatches.map(batch => {
-            const batchDate = new Date(batch.batch_date).toLocaleDateString('uk-UA');
+            const batchDate = new Date(batch.batch_date || batch.production_date).toLocaleDateString('uk-UA');
             const boxes = Math.floor(batch.available_quantity / product.pieces_per_box);
             const pieces = batch.available_quantity % product.pieces_per_box;
             
             let statusClass = 'active';
             let statusText = 'Активна';
             
-            if (batch.status === 'EXPIRED') {
-                statusClass = 'expired';
-                statusText = 'Прострочена';
-            } else if (batch.status === 'EXPIRING') {
-                statusClass = 'expiring';
-                statusText = `${batch.days_to_expiry} дн.`;
+            // Обчислюємо статус партії на основі дати закінчення
+            if (batch.expiry_date) {
+                const expiryDate = new Date(batch.expiry_date);
+                const today = new Date();
+                const daysToExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+                
+                if (daysToExpiry <= 0) {
+                    statusClass = 'expired';
+                    statusText = 'Прострочена';
+                } else if (daysToExpiry <= 7) {
+                    statusClass = 'expiring';
+                    statusText = `${daysToExpiry} дн.`;
+                }
             }
             
             return `

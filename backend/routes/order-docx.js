@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
-const { orderQueries } = require('../database');
+const { orderQueries } = require('../supabase-database');
 
 const router = express.Router();
 

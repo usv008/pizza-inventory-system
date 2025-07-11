@@ -9,25 +9,153 @@ const { ValidationError, NotFoundError } = require('../middleware/errors/AppErro
 const authService = require('../services/authService');
 
 /**
- * @api {get} /api/auth/users Get all users for dropdown
- * @apiDescription Отримати список всіх активних користувачів для dropdown входу
+ * @api {get} /api/auth/users Get all users
+ * @apiDescription Отримати список всіх користувачів (для dropdown входу та адмін панелі)
  */
 router.get('/users', handleAsync(async (req, res) => {
-    const activeUsers = await authService.getActiveUsers();
+    const { include_inactive } = req.query;
     
-    // Додаткова фільтрація на рівні route як запасний варіант
-    const filteredUsers = activeUsers.filter(user => user.active === 1);
+    if (include_inactive === 'true') {
+        // Для адмін панелі - всі користувачі
+        const allUsers = await authService.getAllUsers();
+        console.log(`🔍 Route: отримано ${allUsers.length} користувачів (включно з неактивними)`);
+        res.json(allUsers);
+    } else {
+        // Для dropdown входу - тільки активні
+        const activeUsers = await authService.getActiveUsers();
+        const filteredUsers = activeUsers.filter(user => user.active === 1);
+        console.log(`🔍 Route: отримано ${activeUsers.length} користувачів, після фільтрації: ${filteredUsers.length}`);
+        res.json(filteredUsers);
+    }
+}));
+
+/**
+ * @api {get} /api/auth/users/roles Get available roles
+ * @apiDescription Отримати список доступних ролей для користувачів
+ */
+router.get('/users/roles', handleAsync(async (req, res) => {
+    const roles = [
+        { value: 'ДИРЕКТОР', label: 'Директор' },
+        { value: 'ЗАВІДУЮЧИЙ_ВИРОБНИЦТВОМ', label: 'Завідуючий виробництвом' },
+        { value: 'БУХГАЛТЕР', label: 'Бухгалтер' },
+        { value: 'ПАКУВАЛЬНИК', label: 'Пакувальник' },
+        { value: 'КОМІРНИК', label: 'Комірник' },
+        { value: 'МЕНЕДЖЕР_З_ПРОДАЖІВ', label: 'Менеджер з продажів' }
+    ];
     
-    console.log(`🔍 Route: отримано ${activeUsers.length} користувачів, після фільтрації: ${filteredUsers.length}`);
+    res.json(roles);
+}));
+
+/**
+ * @api {get} /api/auth/users/stats Get user statistics
+ * @apiDescription Отримати статистику користувачів
+ */
+router.get('/users/stats', handleAsync(async (req, res) => {
+    const allUsers = await authService.getAllUsers();
     
-    res.json({
-        success: true,
-        data: filteredUsers,
-        meta: {
-            total: filteredUsers.length,
-            timestamp: new Date().toISOString()
-        }
-    });
+    const stats = {
+        total_users: allUsers.length,
+        active_users: allUsers.filter(u => u.active === 1).length,
+        admin_users: allUsers.filter(u => u.role === 'ДИРЕКТОР').length
+    };
+    
+    res.json(stats);
+}));
+
+/**
+ * @api {post} /api/auth/users Create new user
+ * @apiDescription Створити нового користувача (тільки для адміністраторів)
+ */
+router.post('/users', handleAsync(async (req, res) => {
+    // Перевіряємо аутентифікацію
+    if (!req.session.user) {
+        throw new ValidationError('Необхідна аутентифікація');
+    }
+    
+    // Перевіряємо права адміністратора
+    if (req.session.user.role !== 'ДИРЕКТОР') {
+        throw new ValidationError('Недостатньо прав для створення користувачів');
+    }
+    
+    const { username, email, phone, role, password, active } = req.body;
+    
+    if (!username || !role || !password) {
+        throw new ValidationError('Ім\'я користувача, роль та пароль є обов\'язковими');
+    }
+    
+    const userData = {
+        username,
+        email,
+        phone,
+        role,
+        password,
+        active: active !== false // за замовчуванням true
+    };
+    
+    const newUser = await authService.createUser(userData, req.session.user.id);
+    res.json({ success: true, data: newUser });
+}));
+
+/**
+ * @api {put} /api/auth/users/:id Update user
+ * @apiDescription Оновити дані користувача (тільки для адміністраторів)
+ */
+router.put('/users/:id', handleAsync(async (req, res) => {
+    // Перевіряємо аутентифікацію
+    if (!req.session.user) {
+        throw new ValidationError('Необхідна аутентифікація');
+    }
+    
+    // Перевіряємо права адміністратора
+    if (req.session.user.role !== 'ДИРЕКТОР') {
+        throw new ValidationError('Недостатньо прав для оновлення користувачів');
+    }
+    
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) {
+        throw new ValidationError('Некоректний ID користувача');
+    }
+    
+    const { username, email, phone, role, active } = req.body;
+    
+    const updateData = {};
+    if (username !== undefined) updateData.username = username;
+    if (email !== undefined) updateData.email = email;
+    if (phone !== undefined) updateData.phone = phone;
+    if (role !== undefined) updateData.role = role;
+    if (active !== undefined) updateData.active = active;
+    
+    const updatedUser = await authService.updateUser(userId, updateData, req.session.user.id);
+    res.json({ success: true, data: updatedUser });
+}));
+
+/**
+ * @api {delete} /api/auth/users/:id Delete user
+ * @apiDescription Видалити користувача (тільки для адміністраторів)
+ */
+router.delete('/users/:id', handleAsync(async (req, res) => {
+    // Перевіряємо аутентифікацію
+    if (!req.session.user) {
+        throw new ValidationError('Необхідна аутентифікація');
+    }
+    
+    // Перевіряємо права адміністратора
+    if (req.session.user.role !== 'ДИРЕКТОР') {
+        throw new ValidationError('Недостатньо прав для видалення користувачів');
+    }
+    
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) {
+        throw new ValidationError('Некоректний ID користувача');
+    }
+    
+    // Не дозволяємо видаляти системного адміністратора
+    if (userId === 1) {
+        throw new ValidationError('Неможливо видалити системного адміністратора');
+    }
+    
+    await authService.deleteUser(userId, req.session.user.id);
+    res.json({ success: true, data: { message: 'Користувача видалено' } });
 }));
 
 /**

@@ -153,7 +153,7 @@ class PermissionService {
         
         try {
             // Динамічно завантажуємо database щоб уникнути circular dependency
-            const database = require('../database');
+            const database = require('../supabase-database');
             if (!database.userQueries) {
                 throw new DatabaseError('UserQueries недоступні');
             }

@@ -27,15 +27,8 @@ router.get('/',
         
         const result = await productionService.getAllProduction(filters);
         
-        res.json({
-            success: true,
-            data: result.production,
-            meta: {
-                count: result.count,
-                stats: result.stats,
-                filters: filters
-            }
-        });
+        // Return clean array for frontend compatibility (no wrapper)
+        res.json(result.production || result);
     })
 );
 

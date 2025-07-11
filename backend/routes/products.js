@@ -14,7 +14,8 @@ const responseFormatter = require('../middleware/responseFormatter');
 router.get('/products', async (req, res, next) => {
     try {
         const products = await productService.getAllProducts();
-        res.json(responseFormatter.formatCollection(products));
+        // Return clean array for frontend compatibility (no wrapper)
+        res.json(products);
     } catch (error) {
         next(error);
     }

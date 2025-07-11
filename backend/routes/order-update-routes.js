@@ -9,7 +9,7 @@ router.get('/orders/:id/edit', async (req, res) => {
     console.log('Order ID:', req.params.id);
     
     try {
-        const { orderQueries, productQueries } = require('../database');
+        const { orderQueries, productQueries } = require('../supabase-database');
         
         if (!orderQueries) {
             console.log('База даних недоступна');
@@ -43,7 +43,7 @@ router.put('/orders/:id', async (req, res) => {
     console.log('Request body:', req.body);
     
     try {
-        const { orderQueries } = require('../database');
+        const { orderQueries } = require('../supabase-database');
         const orderId = parseInt(req.params.id);
         
         if (!orderQueries) {
@@ -74,7 +74,7 @@ router.put('/orders/:id', async (req, res) => {
             return res.status(400).json({ error: 'Назва клієнта обов\'язкова' });
         }
         
-        const { db } = require('../database');
+        const { db } = require('../supabase-database');
         
         // Простий UPDATE без позицій (для початку)
         console.log('Оновлюємо основну інформацію замовлення...');

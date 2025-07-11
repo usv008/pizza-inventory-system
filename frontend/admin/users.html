@@ -562,14 +562,15 @@
                 
                 // Завантажуємо користувачів, ролі та статистику паралельно
                 const [usersResponse, rolesResponse, statsResponse] = await Promise.all([
-                    fetch(`${API_URL}/users?include_inactive=true`, { credentials: 'include' }),
-                    fetch(`${API_URL}/users/roles`, { credentials: 'include' }),
-                    fetch(`${API_URL}/users/stats`, { credentials: 'include' })
+                    fetch(`${API_URL}/auth/users?include_inactive=true`, { credentials: 'include' }),
+                    fetch(`${API_URL}/auth/users/roles`, { credentials: 'include' }),
+                    fetch(`${API_URL}/auth/users/stats`, { credentials: 'include' })
                 ]);
                 
                 if (usersResponse.ok) {
                     const usersData = await usersResponse.json();
-                    currentUsers = usersData.success ? usersData.data : [];
+                    // auth/users повертає прямий масив, не wrapped
+                    currentUsers = Array.isArray(usersData) ? usersData : (usersData.success ? usersData.data : []);
                     displayUsers(currentUsers);
                 } else {
                     throw new Error('Не вдалося завантажити список користувачів');
@@ -577,7 +578,8 @@
                 
                 if (rolesResponse.ok) {
                     const rolesData = await rolesResponse.json();
-                    availableRoles = rolesData.success ? rolesData.data : [];
+                    // auth/users/roles повертає прямий масив
+                    availableRoles = Array.isArray(rolesData) ? rolesData : (rolesData.success ? rolesData.data : []);
                     populateRoleSelect();
                 } else {
                     throw new Error('Не вдалося завантажити список ролей');
@@ -585,7 +587,10 @@
                 
                 if (statsResponse.ok) {
                     const statsData = await statsResponse.json();
-                    if (statsData.success) {
+                    // auth/users/stats повертає прямий об'єкт
+                    if (statsData.total_users !== undefined) {
+                        updateStats(statsData);
+                    } else if (statsData.success) {
                         updateStats(statsData.data);
                     }
                 } else {
@@ -791,7 +796,7 @@
             try {
                 showLoading(true);
                 
-                const response = await fetch(`${API_URL}/users/${userId}`, {
+                const response = await fetch(`${API_URL}/auth/users/${userId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
@@ -833,7 +838,7 @@
             try {
                 showLoading(true);
                 
-                const response = await fetch(`${API_URL}/users/${userId}`, {
+                const response = await fetch(`${API_URL}/auth/users/${userId}`, {
                     method: 'DELETE',
                     credentials: 'include'
                 });
@@ -883,7 +888,7 @@
             try {
                 showLoading(true);
                 
-                const url = editingUserId ? `${API_URL}/users/${editingUserId}` : `${API_URL}/users`;
+                const url = editingUserId ? `${API_URL}/auth/users/${editingUserId}` : `${API_URL}/auth/users`;
                 const method = editingUserId ? 'PUT' : 'POST';
                 
                 const response = await fetch(url, {

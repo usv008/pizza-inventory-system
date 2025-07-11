@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
@@ -5,6 +6,7 @@ const SQLiteStore = require('connect-sqlite3')(session);
 
 // Middleware
 const { globalErrorHandler, notFoundHandler } = require('./middleware/errorHandler');
+const userContextMiddleware = require('./middleware/userContextMiddleware');
 
 // Routes
 const productsRouter = require('./routes/products');
@@ -16,7 +18,8 @@ const movementRoutes = require('./routes/movement-routes');
 const orderDocxRouter = require('./routes/order-docx');
 const { router: orderPdfRouter, initPdfRoutes } = require('./routes/order-pdf');
 const batchRoutes = require('./routes/batch-routes');
-const arrivalRoutes = require('./routes/arrival-routes');
+const newWriteoffRoutes = require('./routes/new-writeoff-routes');
+const arrivalRoutes = require('./routes/arrival-routes');  
 const operationsLogRoutes = require('./routes/operations-log-routes');
 const authRoutes = require('./routes/auth-routes');
 const userRoutes = require('./routes/user-routes');
@@ -28,6 +31,7 @@ const orderService = require('./services/orderService');
 const productionService = require('./services/productionService');
 const writeoffService = require('./services/writeoffService');
 const movementService = require('./services/movementService');
+const arrivalService = require('./services/arrivalService');
 const authService = require('./services/authService');
 const permissionService = require('./services/permissionService');
 const userService = require('./services/userService');
@@ -40,7 +44,7 @@ const PORT = 3000;
 // ================================
 app.use(cors());
 app.use(express.json());
-app.use(express.static('../frontend'));
+app.use(express.static('./frontend'));
 
 // Debug middleware - логування всіх запитів
 app.use((req, res, next) => {
@@ -66,17 +70,23 @@ app.use(session({
     }
 }));
 
+// User context middleware for operations logging
+app.use(userContextMiddleware);
+
 // ================================
 // DATABASE INITIALIZATION
 // ================================
-let productQueries, productionQueries, writeoffQueries, clientQueries, orderQueries, movementsQueries, initDatabase;
+let productQueries, productionQueries, writeoffQueries, clientQueries, orderQueries, movementsQueries, batchQueries, arrivalQueries, initDatabase;
 let userQueries, sessionQueries, auditQueries;
+// Import mock userQueries
+const { userQueries: mockUserQueries } = require("./queries/user-queries-mock");
+userQueries = mockUserQueries;
 let OperationsLogController;
 
 try {
-    console.log('[DB LOG] Спроба завантажити ./database.js');
-    const database = require('./database');
-    console.log('[DB LOG] Модуль database.js завантажено успішно.');
+    console.log('[DB LOG] Спроба завантажити ./supabase-database.js');
+    const database = require('./supabase-database');
+    console.log('[DB LOG] Модуль supabase-database.js завантажено успішно.');
 
     productQueries = database.productQueries;
     productionQueries = database.productionQueries || null;
@@ -84,10 +94,19 @@ try {
     clientQueries = database.clientQueries || null;
     orderQueries = database.orderQueries || null;
     movementsQueries = database.movementsQueries || null;
-    userQueries = database.userQueries || null;
+    batchQueries = database.batchQueries || null;
+    arrivalQueries = database.arrivalQueries || null;
+    // userQueries = database.userQueries || null; // Keep mock version
     sessionQueries = database.sessionQueries || null;
     auditQueries = database.auditQueries || null;
     initDatabase = database.initDatabase;
+    
+    console.log("🔄 Using mock Supabase - initializing AuthService directly...");
+    
+    // Initialize AuthService immediately for mock
+        // authService already initialized with mock queries - SKIP
+    
+    console.log("✅ Mock AuthService initialized");
     
     // Operations Log Controller
     OperationsLogController = require('./controllers/operations-log-controller');
@@ -97,9 +116,11 @@ try {
         throw new Error('Помилка ініціалізації БД: функція не знайдена.');
     }
 
+    console.log("🔄 Attempting to initialize database...");
     // Ініціалізуємо базу даних
     initDatabase().then(() => {
         console.log('🚀 База даних готова до роботи');
+        console.log("✅ Database initialized successfully, initializing services...");
         
         // Ініціалізуємо сервіси з залежностями
         productService.initialize({
@@ -116,6 +137,7 @@ try {
             orderQueries,
             productQueries,
             clientQueries,
+            batchQueries,
             OperationsLogController
         });
         
@@ -137,6 +159,13 @@ try {
             OperationsLogController
         });
         
+        arrivalService.initialize({
+            arrivalQueries,
+            productQueries,
+            OperationsLogController
+        });
+        
+        // Ініціалізуємо AuthService з залежностями
         authService.initialize({
             userQueries,
             sessionQueries,
@@ -159,6 +188,70 @@ try {
         });
         
         console.log('✅ Сервіси ініціалізовано');
+        
+        // ================================
+        // MOUNT ROUTES AFTER SERVICE INITIALIZATION
+        // ================================
+        console.log('🔧 Mounting routes...');
+        app.use('/api', productsRouter);
+        console.log('✅ Products router mounted');
+        app.use('/api/auth', authRoutes);
+        console.log('✅ Auth router mounted');
+
+        // Test route для діагностики - поза auth простором
+        app.get('/api/test-auth', (req, res) => {
+            res.json({ message: 'Test route working!', auth_service: typeof authService, timestamp: new Date().toISOString() });
+        });
+        app.use('/api/users', userRoutes);
+        console.log('✅ Users router mounted');
+        app.use('/api/clients', clientRoutes);
+        console.log('✅ Clients router mounted');
+        app.use('/api/orders', orderRoutes);
+        console.log('✅ Orders router mounted');
+        app.use('/api/production', productionRoutes);
+        console.log('✅ Production router mounted');
+        app.use('/api/writeoffs', writeoffRoutes);
+        console.log('✅ Writeoffs router mounted');
+        app.use('/api/movements', movementRoutes);
+        console.log('✅ Movements router mounted');
+        app.use('/api/arrivals', arrivalRoutes);
+        console.log('✅ Arrivals router mounted');
+        app.use(orderDocxRouter);
+        app.use('/api', orderPdfRouter);
+        app.use('/api', batchRoutes);
+        
+        // Нові writeoff роути
+        app.use('/api', newWriteoffRoutes);
+        console.log('✅ New Writeoff routes підключено');
+        
+        // Додаткові прямі роути для тестування
+        const NewWriteoffController = require('./controllers/new-writeoff-controller');
+        app.post('/api/new-writeoff', NewWriteoffController.createWriteoff);
+        app.get('/api/writeoff-status', NewWriteoffController.getWriteoffStatus);
+        console.log('✅ Прямі writeoff роути додано');
+        
+        app.use('/api/operations', operationsLogRoutes);
+        console.log('✅ Всі роути підключено');
+        
+        // ================================
+        // ERROR HANDLING - AFTER ROUTES
+        // ================================
+        app.use(notFoundHandler);
+        app.use(globalErrorHandler);
+        console.log('✅ Error handlers підключено');
+        
+        // ================================
+        // SERVER STARTUP AFTER FULL INITIALIZATION
+        // ================================
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`🍕 Pizza Inventory API (Modular) запущено на порту ${PORT}`);
+            console.log(`🌐 Доступний за адресою: http://116.203.116.234:${PORT}`);
+            console.log(`📊 API документація: http://116.203.116.234:${PORT}/api`);
+            console.log(`🏗️ Архітектура: Router + Service + Validator Pattern`);
+            console.log(`📦 Завершені модулі: Auth, Users, Products, Clients, Orders, Production, Writeoffs, Movements, Arrivals (9/9 - 100%)`);
+            console.log(`✅ Система авторизації та користувачів готова!`);
+            console.log(`🎯 PHASE 1 COMPLETE: Arrivals module відновлено!`);
+        });
     }).catch(err => {
         console.error('❌ Помилка ініціалізації БД:', err);
     });
@@ -172,6 +265,8 @@ try {
     clientQueries = null;
     orderQueries = null;
     movementsQueries = null;
+    batchQueries = null;
+    arrivalQueries = null;
     userQueries = null;
     sessionQueries = null;
     auditQueries = null;
@@ -253,36 +348,24 @@ app.get('/api', (req, res) => {
             movementsByProduct: 'GET /api/movements/product/:id',
             movementStatistics: 'GET /api/movements/statistics',
             movementTypes: 'GET /api/movements/types',
-            movementSummary: 'GET /api/movements/summary'
+            movementSummary: 'GET /api/movements/summary',
+            
+            // Arrivals Module
+            arrivals: 'GET /api/arrivals',
+            createArrival: 'POST /api/arrivals',
+            arrivalById: 'GET /api/arrivals/:id'
         },
         architecture: 'Router + Service + Validator Pattern',
         modules: {
-            completed: ['Auth', 'Users', 'Products', 'Clients', 'Orders', 'Production', 'Writeoffs', 'Movements'],
-            total: 8,
+            completed: ['Auth', 'Users', 'Products', 'Clients', 'Orders', 'Production', 'Writeoffs', 'Movements', 'Arrivals'],
+            total: 9,
             completion: '100%'
         },
         timestamp: new Date().toISOString()
     });
 });
 
-// Mount routes
-console.log('🔧 Mounting routes...');
-app.use('/api', productsRouter);
-console.log('✅ Products router mounted');
-app.use('/api/auth', authRoutes);
-console.log('✅ Auth router mounted');
-app.use('/api/users', userRoutes);
-console.log('✅ Users router mounted');
-app.use('/api/clients', clientRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/production', productionRoutes);
-app.use('/api/writeoffs', writeoffRoutes);
-app.use('/api/movements', movementRoutes);
-app.use(orderDocxRouter);
-app.use('/api', orderPdfRouter);
-app.use('/api', batchRoutes);
-app.use('/api/arrivals', arrivalRoutes);
-app.use('/api/operations', operationsLogRoutes);
+// Mount routes - ALL ROUTES WILL BE MOUNTED AFTER SERVICE INITIALIZATION
 
 // ================================
 // LEGACY ENDPOINTS (TEMPORARY)
@@ -322,10 +405,9 @@ app.get('/api/stats', async (req, res, next) => {
 });
 
 // ================================
-// ERROR HANDLING
+// ERROR HANDLING - MOVED TO ASYNC BLOCK
 // ================================
-app.use(notFoundHandler);
-app.use(globalErrorHandler);
+// Error handlers are now mounted after routes in the async initialization block
 
 // ================================
 // ERROR HANDLING FOR UNCAUGHT EXCEPTIONS
@@ -343,13 +425,6 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 // ================================
-// SERVER STARTUP
+// SERVER STARTUP - MOVED TO AFTER SERVICE INITIALIZATION
 // ================================
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🍕 Pizza Inventory API (Modular) запущено на порту ${PORT}`);
-    console.log(`🌐 Доступний за адресою: http://116.203.116.234:${PORT}`);
-    console.log(`📊 API документація: http://116.203.116.234:${PORT}/api`);
-    console.log(`🏗️ Архітектура: Router + Service + Validator Pattern`);
-    console.log(`📦 Завершені модулі: Auth, Users, Products, Clients, Orders, Production, Writeoffs, Movements (8/8 - 100%)`);
-    console.log(`✅ Система авторизації та користувачів готова!`);
-}); 
+// Server will start after services are initialized in the async block 

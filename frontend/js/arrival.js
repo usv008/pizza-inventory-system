@@ -48,7 +48,7 @@ function renderArrivalItems() {
     });
     
     // Підтягнути продукти
-    fetch('/api/products').then(r=>r.json()).then(result => {
+    fetch('http://localhost:3000/api/products').then(r=>r.json()).then(result => {
         // Обробляємо новий формат API відповіді {success: true, data: [...]}
         const products = result.success ? result.data : result;
         
@@ -195,7 +195,7 @@ document.getElementById('arrival-form').onsubmit = e => {
     }
     
     // Відправка на сервер
-    fetch('/api/arrivals', {
+    fetch('http://localhost:3000/api/arrivals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ arrival_date, reason, items: arrivalItems })
@@ -203,7 +203,7 @@ document.getElementById('arrival-form').onsubmit = e => {
     .then(r => r.json())
     .then(data => {
         if (data.success) {
-            showSuccess(`Документ оприходування №${data.arrival_number} успішно створено!`);
+            showSuccess(`Документ оприходування №${data.arrival_number || 'TEMP'} успішно створено!`);
             
             // Очищуємо форму
             document.getElementById('arrival-form').reset();
@@ -211,7 +211,11 @@ document.getElementById('arrival-form').onsubmit = e => {
             arrivalItems = [];
             renderArrivalItems();
         } else {
-            showError(data.error || 'Помилка збереження документу');
+            // Показуємо детальну помилку для діагностики
+            const errorMessage = data.error && typeof data.error === 'object' ? 
+                data.error.message || data.error.details || JSON.stringify(data.error) :
+                data.error || 'Помилка збереження документу';
+            showError(`Помилка збереження: ${errorMessage}`);
         }
         resetSubmitButton();
     })

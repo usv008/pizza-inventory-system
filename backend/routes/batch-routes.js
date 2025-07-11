@@ -20,6 +20,9 @@ router.post('/orders/:orderId/reserve-batches', BatchController.reserveBatches);
 // Списання партії
 router.post('/batches/:batchId/writeoff', BatchController.writeoffBatch);
 
+// Резервування партій (базове)
+router.post("/batches/reserve", BatchController.reserveBatches);
+
 // Отримати доступність товару
 router.get('/products/:productId/availability', BatchController.getProductAvailability);
 

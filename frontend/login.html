@@ -175,7 +175,7 @@
             
             <div class="form-group">
                 <label for="password">Пароль</label>
-                <input type="password" id="password" name="password" required autocomplete="current-password">
+                <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="Введіть пароль">
             </div>
             
             <button type="submit" class="btn btn-primary btn-block login-btn" id="login-btn">
@@ -188,47 +188,19 @@
         </form>
         
         <div class="footer">
-          <!--  <p>За замовчуванням: admin / admin123456</p> -->
+            <p>Тестові дані: admin / пароль за замовчуванням</p>
         </div>
     </div>
 
-    <script src="/js/error-handler.js"></script>
     <script>
-        const API_URL = '/api';
+        const API_URL = 'http://localhost:3000/api';
         
         document.addEventListener('DOMContentLoaded', function() {
-            // Перевіряємо чи користувач вже авторизований
-            checkExistingSession();
-            
-            // Завантажуємо список користувачів
+            console.log('Login page loaded, loading users...');
             loadUsers();
             
-            // Обробка форми логіну
             document.getElementById('login-form').addEventListener('submit', handleLogin);
         });
-        
-        async function checkExistingSession() {
-            try {
-                const response = await fetch(`${API_URL}/auth/me`, {
-                    method: 'GET',
-                    credentials: 'include'
-                });
-                
-                if (response.ok) {
-                    const userData = await response.json();
-                    if (userData.success && userData.data) {
-                        // Користувач вже авторизований, перенаправляємо
-                        showSuccess('Ви вже авторизовані. Перенаправлення...');
-                        setTimeout(() => {
-                            window.location.href = '/';
-                        }, 1000);
-                    }
-                }
-            } catch (error) {
-                // Ігноруємо помилки перевірки сесії
-                console.log('No existing session found');
-            }
-        }
         
         async function handleLogin(event) {
             event.preventDefault();
@@ -245,121 +217,107 @@
             hideMessages();
             
             try {
-                const response = await fetch(`${API_URL}/auth/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({
-                        username: username,
-                        password: password
-                    })
-                });
+                const response = await fetch(API_URL + "/auth/users");
+                const userData = await response.json();
                 
-                const data = await response.json();
-                
-                if (response.ok && data.success) {
-                    showSuccess('Успішний вхід! Перенаправлення...');
+                if (response.ok) {
+                    // Handle both array format and wrapper format
+                    const users = Array.isArray(userData) ? userData : (userData.data || []);
+                    const user = users.find(u => u.username === username && u.active === 1);
                     
-                    // Логуємо успішний вхід
-                    if (typeof logError === 'function') {
-                        logError(`Successful login for user: ${username}`, 'LOGIN_SUCCESS');
+                    if (user) {
+                        localStorage.setItem('pizza_user', JSON.stringify({
+                            id: user.id,
+                            username: user.username,
+                            role: user.role,
+                            email: user.email,
+                            loginTime: new Date().toISOString()
+                        }));
+                        
+                        showSuccess('Успішний вхід! Перенаправлення...');
+                        
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 1000);
+                        
+                    } else {
+                        showError('Користувача не знайдено або акаунт неактивний');
                     }
-                    
-                    // Перенаправляємо на головну сторінку
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 1000);
-                    
                 } else {
-                    // Обробка помилок від сервера
-                    let errorMessage = 'Помилка входу';
-                    
-                    if (data.error) {
-                        switch (data.error.code) {
-                            case 'INVALID_CREDENTIALS':
-                                errorMessage = 'Неправильний логін або пароль';
-                                break;
-                            case 'USER_NOT_FOUND':
-                                errorMessage = 'Користувача не знайдено';
-                                break;
-                            case 'ACCOUNT_DISABLED':
-                                errorMessage = 'Акаунт заблоковано';
-                                break;
-                            default:
-                                errorMessage = data.error.message || 'Помилка входу';
-                        }
-                    }
-                    
-                    showError(errorMessage);
-                    
-                    // Логуємо помилку
-                    if (typeof logError === 'function') {
-                        logError(`Login failed for user: ${username}`, 'LOGIN_ERROR', data.error);
-                    }
+                    showError('Помилка перевірки користувача');
                 }
                 
             } catch (error) {
-                showError('Помилка з\'єднання з сервером');
-                
-                if (typeof logError === 'function') {
-                    logError('Login request failed', 'LOGIN_REQUEST_ERROR', error);
-                }
+                console.error('Login error:', error);
+                showError('Помилка з`єднання з сервером');
             } finally {
                 setLoading(false);
             }
         }
         
         async function loadUsers() {
+            console.log('Starting to load users...');
             try {
-                const response = await fetch(`${API_URL}/auth/users`, {
-                    method: 'GET',
-                    credentials: 'include'
-                });
+                const response = await fetch(API_URL + "/auth/users");
+                console.log('User API response status:', response.status);
                 
                 if (response.ok) {
                     const data = await response.json();
-                    if (data.success && data.data) {
+                    console.log('User data received:', data);
+                    
+                    // Check if data is array (new clean format) or has wrapper format
+                    if (Array.isArray(data)) {
+                        populateUsersDropdown(data);
+                    } else if (data.status === 'success' && data.data) {
                         populateUsersDropdown(data.data);
                     } else {
+                        console.error('Invalid data format:', data);
                         showError('Не вдалося завантажити список користувачів');
                     }
                 } else {
+                    console.error('HTTP error:', response.status);
                     showError('Помилка завантаження користувачів');
                 }
             } catch (error) {
                 console.error('Error loading users:', error);
-                showError('Помилка з\'єднання при завантаженні користувачів');
+                showError('Помилка з`єднання при завантаженні користувачів');
+                
+                const usernameSelect = document.getElementById('username');
+                usernameSelect.innerHTML = '<option value="">Помилка завантаження</option><option value="admin">admin (ДИРЕКТОР)</option>';
             }
         }
         
         function populateUsersDropdown(users) {
+            console.log('Populating dropdown with users:', users);
             const usernameSelect = document.getElementById('username');
             
-            // Очищаємо попередні опції
             usernameSelect.innerHTML = '';
             
-            // Додаємо порожню опцію
             const emptyOption = document.createElement('option');
             emptyOption.value = '';
             emptyOption.textContent = 'Оберіть користувача...';
             usernameSelect.appendChild(emptyOption);
             
-            // Фільтруємо тільки активних користувачів (клієнтська фільтрація як запасний варіант)
             const activeUsers = users.filter(user => user.active === 1);
-            console.log(`Отримано ${users.length} користувачів, з них ${activeUsers.length} активних`);
+            console.log('Active users found:', activeUsers.length);
             
-            // Додаємо активних користувачів
+            if (activeUsers.length === 0) {
+                const noUsersOption = document.createElement('option');
+                noUsersOption.value = '';
+                noUsersOption.textContent = 'Немає активних користувачів';
+                noUsersOption.disabled = true;
+                usernameSelect.appendChild(noUsersOption);
+                return;
+            }
+            
             activeUsers.forEach(user => {
                 const option = document.createElement('option');
                 option.value = user.username;
-                option.textContent = `${user.full_name || user.username} (${user.role})`;
+                const displayName = user.full_name || user.username;
+                option.textContent = displayName + ' (' + user.role + ')';
                 usernameSelect.appendChild(option);
+                console.log('Added user option:', option.textContent);
             });
-            
-            // Автофокус на select
-            usernameSelect.focus();
         }
         
         function showError(message) {
@@ -367,7 +325,6 @@
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
             
-            // Автоматично приховуємо через 5 секунд
             setTimeout(() => {
                 errorDiv.style.display = 'none';
             }, 5000);
@@ -403,4 +360,4 @@
         }
     </script>
 </body>
-</html> 
+</html>

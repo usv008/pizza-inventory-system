@@ -231,7 +231,7 @@ router.get('/:id',
             const id = parseInt(req.params.id);
             
             // Використовуємо приватний метод через створення тимчасового екземпляра
-            const { db } = require('../database');
+            const { db } = require('../supabase-database');
             
             const movement = await new Promise((resolve, reject) => {
                 const sql = `
@@ -293,7 +293,7 @@ router.get('/types', (req, res) => {
  */
 router.get('/summary', async (req, res, next) => {
     try {
-        const { db } = require('../database');
+        const { db } = require('../supabase-database');
         
         const summary = await new Promise((resolve, reject) => {
             const sql = `

@@ -1,183 +1,113 @@
-const db = require('../database').db;
-const OperationsLogController = require('./operations-log-controller');
+const ArrivalService = require('../services/arrivalService');
+
+// Отримати всі документи приходу
+exports.getAllArrivals = async (req, res, next) => {
+    try {
+        const filters = {
+            date_from: req.query.date_from,
+            date_to: req.query.date_to,
+            created_by: req.query.created_by,
+            limit: req.query.limit
+        };
+
+        const result = await ArrivalService.getAllArrivals(filters);
+        
+        res.json({
+            success: result.success,
+            message: result.message,
+            data: result.data,
+            pagination: result.pagination
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Отримати документ приходу за ID
+exports.getArrivalById = async (req, res, next) => {
+    try {
+        const id = parseInt(req.params.id);
+        
+        if (!id || isNaN(id)) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Некоректний ID документа' 
+            });
+        }
+
+        const result = await ArrivalService.getArrivalById(id);
+        
+        res.json({
+            success: result.success,
+            message: result.message,
+            data: result.data
+        });
+    } catch (error) {
+        if (error.message.includes('не знайдено')) {
+            return res.status(404).json({ 
+                success: false, 
+                error: error.message 
+            });
+        }
+        next(error);
+    }
+};
 
 // Створити документ приходу
-exports.createArrival = (req, res) => {
-    const { arrival_date, reason, created_by, items } = req.body;
-    
-    if (!arrival_date || !reason || !Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ error: 'Некоректні дані для оприходування' });
-    }
-    
-    db.serialize(() => {
-        db.run('BEGIN TRANSACTION');
+exports.createArrival = async (req, res, next) => {
+    try {
+        const { arrival_date, reason, items } = req.body;
         
-        // Генеруємо arrival_number (YYYYMMDD-XXX)
-        db.get('SELECT COUNT(*) as count FROM arrivals WHERE arrival_date = ?', [arrival_date], (err, row) => {
-            if (err) {
-                db.run('ROLLBACK');
-                return res.status(500).json({ error: 'DB error' });
-            }
-            
-            const count = row.count + 1;
-            const arrival_number = `${arrival_date.replace(/-/g, '')}-${String(count).padStart(3, '0')}`;
-            
-            db.run(`INSERT INTO arrivals (arrival_number, arrival_date, reason, created_by, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-                [arrival_number, arrival_date, reason, created_by || 'system'],
-                function(err) {
-                    if (err) {
-                        db.run('ROLLBACK');
-                        return res.status(500).json({ error: 'DB error' });
-                    }
-                    
-                    const arrival_id = this.lastID;
-                    let completed = 0;
-                    let hasError = false;
-                    
-                    items.forEach(item => {
-                        if (hasError) return;
-                        
-                        const { product_id, quantity, batch_date, notes } = item;
-                        
-                        if (!product_id || !quantity || !batch_date) {
-                            hasError = true;
-                            db.run('ROLLBACK');
-                            return res.status(400).json({ error: 'Некоректна позиція' });
-                        }
-                        
-                        // Додаємо позицію в arrivals_items
-                        db.run(`INSERT INTO arrivals_items (arrival_id, product_id, quantity, batch_date, notes, created_at)
-                                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-                            [arrival_id, product_id, quantity, batch_date, notes || ''],
-                            function(err) {
-                                if (err) {
-                                    hasError = true;
-                                    db.run('ROLLBACK');
-                                    return res.status(500).json({ error: 'DB error' });
-                                }
-                                
-                                // Оновлюємо партію (або створюємо)
-                                db.get(`SELECT * FROM production_batches WHERE product_id = ? AND batch_date = ?`,
-                                    [product_id, batch_date], (err, batch) => {
-                                    if (err) {
-                                        hasError = true;
-                                        db.run('ROLLBACK');
-                                        return res.status(500).json({ error: 'DB error' });
-                                    }
-                                    
-                                    if (batch) {
-                                        // Якщо партія існує (навіть якщо закінчилась) — реактивуємо і додаємо кількість
-                                        db.run(`UPDATE production_batches 
-                                               SET available_quantity = available_quantity + ?, 
-                                                   total_quantity = total_quantity + ?, 
-                                                   status = 'ACTIVE', 
-                                                   updated_at = CURRENT_TIMESTAMP 
-                                               WHERE id = ?`,
-                                            [quantity, quantity, batch.id], (err) => {
-                                            if (err) {
-                                                hasError = true;
-                                                db.run('ROLLBACK');
-                                                return res.status(500).json({ error: 'DB error' });
-                                            }
-                                            updateProductAndFinish();
-                                        });
-                                    } else {
-                                        // Якщо партії не було — створюємо нову
-                                        db.run(`INSERT INTO production_batches 
-                                               (product_id, batch_date, production_date, total_quantity, available_quantity, expiry_date, status, created_at, updated_at)
-                                               VALUES (?, ?, ?, ?, ?, DATE(?, '+365 day'), 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-                                            [product_id, batch_date, batch_date, quantity, quantity, batch_date], (err) => {
-                                            if (err) {
-                                                hasError = true;
-                                                db.run('ROLLBACK');
-                                                return res.status(500).json({ error: 'DB error' });
-                                            }
-                                            updateProductAndFinish();
-                                        });
-                                    }
-                                    
-                                    // Оновлюємо залишки товару
-                                    function updateProductAndFinish() {
-                                        db.get('SELECT stock_pieces FROM products WHERE id = ?', [product_id], (err, prod) => {
-                                            if (err) {
-                                                hasError = true;
-                                                db.run('ROLLBACK');
-                                                return res.status(500).json({ error: 'DB error' });
-                                            }
-                                            
-                                            let newStock = (prod ? prod.stock_pieces : 0) + quantity;
-                                            
-                                            db.run('UPDATE products SET stock_pieces = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', 
-                                                   [newStock, product_id], (err) => {
-                                                if (err) {
-                                                    hasError = true;
-                                                    db.run('ROLLBACK');
-                                                    return res.status(500).json({ error: 'DB error' });
-                                                }
-                                                
-                                                // Додаємо рух IN
-                                                db.run(`INSERT INTO stock_movements 
-                                                       (product_id, movement_type, pieces, boxes, reason, user, batch_id, batch_date, created_at)
-                                                       VALUES (?, 'IN', ?, 0, ?, ?, NULL, ?, CURRENT_TIMESTAMP)`,
-                                                    [product_id, quantity, reason, created_by || 'system', batch_date], (err) => {
-                                                    if (err) {
-                                                        hasError = true;
-                                                        db.run('ROLLBACK');
-                                                        return res.status(500).json({ error: 'DB error' });
-                                                    }
-                                                    
-                                                    completed++;
-                                                    if (completed === items.length && !hasError) {
-                                                        // Успішно завершили всі операції - логуємо та відповідаємо
-                                                        finalizeArrival();
-                                                    }
-                                                });
-                                            });
-                                        });
-                                    }
-                                });
-                            });
-                    });
-                    
-                    // Функція для фіналізації приходу з логуванням
-                    async function finalizeArrival() {
-                        try {
-                            // Розраховуємо загальну кількість для логування
-                            const totalQuantity = items.reduce((sum, item) => sum + parseInt(item.quantity), 0);
-                            
-                            // Логуємо операцію приходу
-                            await OperationsLogController.logOperation({
-                                operation_type: OperationsLogController.OPERATION_TYPES.ARRIVAL,
-                                operation_id: arrival_id,
-                                entity_type: 'arrival',
-                                entity_id: arrival_id,
-                                new_data: {
-                                    arrival_number: arrival_number,
-                                    arrival_date: arrival_date,
-                                    reason: reason,
-                                    items_count: items.length,
-                                    total_quantity: totalQuantity,
-                                    created_by: created_by || 'system'
-                                },
-                                description: `Оприходування №${arrival_number}: ${totalQuantity} шт (${items.length} позицій) - ${reason}`,
-                                user_name: created_by || 'system',
-                                ip_address: req.ip || null,
-                                user_agent: req.get('User-Agent') || null
-                            });
-                            
-                            console.log(`✅ Логування приходу ${arrival_number} успішне`);
-                        } catch (logError) {
-                            console.error('❌ Помилка логування приходу:', logError);
-                            // Не блокуємо операцію через помилку логування
-                        }
-                        
-                        // Завершуємо транзакцію та відповідаємо
-                        db.run('COMMIT');
-                        res.json({ success: true, arrival_number });
-                    }
-                }
+        // Отримуємо user з сесії, якщо доступна
+        const created_by = req.userContext?.username || req.body.created_by || 'system';
+        
+        // Збираємо інформацію про запит для логування
+        const requestInfo = {
+            ip: req.ip || req.connection.remoteAddress,
+            userAgent: req.get('User-Agent'),
+            user: created_by
+        };
+
+        const arrivalData = {
+            arrival_date,
+            reason,
+            created_by,
+            items
+        };
+
+        const result = await ArrivalService.createArrival(arrivalData, requestInfo);
+        
+        // Логуємо операцію створення приходу
+        if (req.logOperation && result.success) {
+            await req.logOperation(
+                'ARRIVAL_CREATE',
+                {
+                    arrival_number: result.data.arrival_number,
+                    arrival_date: arrival_date,
+                    reason: reason,
+                    items_count: items?.length || 0,
+                    total_items: items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0
+                },
+                'ARRIVAL',
+                result.data.id
             );
+        }
+        
+        res.status(201).json({
+            success: result.success,
+            message: result.message,
+            arrival_number: result.data.arrival_number,
+            data: result.data
         });
-    });
+    } catch (error) {
+        if (error.message.includes('Некоректні дані') || 
+            error.message.includes('Некоректна позиція') ||
+            error.message.includes('не знайдено')) {
+            return res.status(400).json({ 
+                success: false, 
+                error: error.message 
+            });
+        }
+        next(error);
+    }
 };

@@ -115,16 +115,24 @@
     <script src="/js/error-handler.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/navigation.js"></script>
-    
+                const boxes = Math.floor((p.available_quantity || 0) / (p.pieces_per_box || 1));
     <script>
-        const API_URL = '/api';
+        const API_URL = 'http://localhost:3000/api';
 
         // Завантажуємо дані при готовності DOM
         document.addEventListener('DOMContentLoaded', async function() {
-            // Спочатку перевіряємо аутентифікацію
-            const isAuthenticated = await authManager.requireAuth();
-            if (isAuthenticated) {
-                loadPizzasWithBatches();
+            // На головній сторінці дозволяємо перегляд даних без авторизації
+            // Це дозволить користувачам бачити наявні товари та статистику
+            loadPizzasWithBatches();
+            
+            // Опціонально перевіряємо аутентифікацію для відображення користувача
+            try {
+                const isAuthenticated = await authManager.isAuthenticated();
+                if (isAuthenticated) {
+                    authManager.updateUserDisplay();
+                }
+            } catch (error) {
+                console.log('Auth check failed, but allowing data access');
             }
         });
 
@@ -186,8 +194,8 @@
             
             // Фільтруємо товари що мають активні партії
             const productsWithActiveBatches = products.filter(product => {
-                return product.total_available !== null && 
-                       product.total_available > 0 && 
+                return product.available_quantity !== null && 
+                       product.available_quantity > 0 && 
                        product.batches && 
                        product.batches.some(b => b.available_quantity > 0 && b.batch_date !== null);
             });
@@ -238,7 +246,7 @@
                 return `
                     <div class="${cardClass}">
                         <div class="pizza-name">${product.product_name}</div>
-                        <div class="pizza-stock ${stockClass}">${product.total_available || 0} шт</div>
+                        <div class="pizza-stock ${stockClass}">${product.available_quantity || 0} шт</div>
                         <div class="pizza-details">
                             Код: ${product.product_code}<br>
                             Ящиків: ${product.total_boxes || 0}<br>
@@ -384,11 +392,13 @@
             const productCount = totalProducts !== null ? totalProducts : products.length;
             // Обробляємо null значення - коли товар без партій
             const totalStock = products.reduce((sum, p) => {
-                const available = p.total_available !== null && p.total_available !== undefined ? p.total_available : 0;
+                const available = p.available_quantity !== null && p.available_quantity !== undefined ? p.available_quantity : 0;
                 return sum + available;
             }, 0);
             const totalBoxes = products.reduce((sum, p) => {
-                const boxes = p.total_boxes !== null && p.total_boxes !== undefined ? p.total_boxes : 0;
+                const available = p.available_quantity || 0;
+                const perBox = p.pieces_per_box || 1;
+                const boxes = Math.floor(available / perBox);
                 return sum + boxes;
             }, 0);
             const totalBatches = products.reduce((sum, p) => {
@@ -397,10 +407,10 @@
             }, 0);
 
             const elements = {
-                'total-pizzas': productCount,
-                'total-stock': totalStock, 
-                'total-boxes': totalBoxes,
-                'total-batches': totalBatches
+                "total-pizzas": productCount,
+                "total-stock": totalStock,
+                "total-boxes": totalBoxes,
+                "total-batches": totalBatches
             };
 
             Object.entries(elements).forEach(([id, value]) => {
@@ -408,7 +418,7 @@
                 if (element) {
                     element.textContent = value;
                 } else {
-                    logError(`Stats element not found: ${id}`, 'DOM_ERROR');
+                    logError(`Stats element not found: ${id}`, "DOM_ERROR");
                 }
             });
         }

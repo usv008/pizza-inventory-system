@@ -29,6 +29,7 @@ class AuthService {
      * Перевірка ініціалізації
      */
     _checkInitialization() {
+        console.log(`[AUTH DEBUG] initialized: ${this.initialized}, userQueries: ${!!this.userQueries}`);
         if (!this.initialized || !this.userQueries) {
             throw new DatabaseError('AuthService не ініціалізовано або БД недоступна');
         }
@@ -65,32 +66,29 @@ class AuthService {
     }
 
     /**
-     * Отримати всіх користувачів для dropdown (старий метод)
+     * Отримати всіх користувачів (включно з неактивними) для адмін панелі
      */
     async getAllUsers() {
         this._checkInitialization();
         
         try {
             const users = await this.userQueries.getAll();
-            console.log(`🔍 Отримано ${users.length} користувачів з БД`);
+            console.log(`🔍 Отримано ${users.length} користувачів з БД (включно з неактивними)`);
             
-            // Фільтруємо тільки активних користувачів
-            const activeUsers = users.filter(user => {
-                console.log(`🔍 Користувач ${user.username}: active=${user.active} (type: ${typeof user.active})`);
-                return user.active === 1;
-            });
-            
-            console.log(`👥 Отримано ${activeUsers.length} активних користувачів для вибору`);
-            return activeUsers.map(user => ({
+            return users.map(user => ({
                 id: user.id,
                 username: user.username,
                 role: user.role,
                 active: user.active,
+                email: user.email,
+                phone: user.phone,
+                created_at: user.created_at,
+                updated_at: user.updated_at,
                 full_name: user.username // Використовуємо username як повне ім'я
             }));
         } catch (error) {
-            console.error('❌ Помилка отримання користувачів:', error);
-            throw new DatabaseError(`Помилка отримання користувачів: ${error.message}`);
+            console.error('❌ Помилка отримання всіх користувачів:', error);
+            throw new DatabaseError(`Помилка отримання всіх користувачів: ${error.message}`);
         }
     }
 
@@ -405,6 +403,156 @@ class AuthService {
         } catch (error) {
             console.error('❌ Помилка очищення сесій:', error);
             throw new DatabaseError(`Помилка очищення сесій: ${error.message}`);
+        }
+    }
+
+    /**
+     * Створення нового користувача
+     */
+    async createUser(userData, adminId) {
+        this._checkInitialization();
+        
+        try {
+            const { username, email, phone, role, password, active } = userData;
+            
+            // Перевіряємо чи користувач з таким username вже існує
+            const existingUser = await this.userQueries.getByUsername(username);
+            if (existingUser) {
+                throw new ValidationError('Користувач з таким іменем вже існує');
+            }
+            
+            // Хешуємо пароль
+            const hashedPassword = await bcrypt.hash(password, this.saltRounds);
+            
+            // Створюємо користувача
+            const newUser = await this.userQueries.create({
+                username,
+                email: email || null,
+                phone: phone || null,
+                role,
+                password_hash: hashedPassword,
+                active: active ? 1 : 0,
+                first_login: 0, // Пароль вже встановлено
+                permissions: JSON.stringify({}) // Базові права
+            });
+            
+            await this._logUserAudit(newUser.id, 'USER_CREATED', {
+                username,
+                role,
+                created_by: adminId
+            });
+            
+            console.log(`👤 Створено нового користувача: ${username} (ID: ${newUser.id})`);
+            
+            return {
+                id: newUser.id,
+                username,
+                email,
+                phone,
+                role,
+                active: active ? 1 : 0,
+                created_at: new Date().toISOString()
+            };
+        } catch (error) {
+            if (error instanceof ValidationError) {
+                throw error;
+            }
+            console.error('❌ Помилка створення користувача:', error);
+            throw new DatabaseError(`Помилка створення користувача: ${error.message}`);
+        }
+    }
+    
+    /**
+     * Оновлення даних користувача
+     */
+    async updateUser(userId, updateData, adminId) {
+        this._checkInitialization();
+        
+        try {
+            const user = await this.userQueries.getById(userId);
+            if (!user) {
+                throw new NotFoundError('Користувача не знайдено');
+            }
+            
+            // Перевіряємо чи username не зайнятий іншим користувачем
+            if (updateData.username && updateData.username !== user.username) {
+                const existingUser = await this.userQueries.getByUsername(updateData.username);
+                if (existingUser && existingUser.id !== userId) {
+                    throw new ValidationError('Користувач з таким іменем вже існує');
+                }
+            }
+            
+            // Підготовка даних для оновлення
+            const updateFields = {};
+            if (updateData.username !== undefined) updateFields.username = updateData.username;
+            if (updateData.email !== undefined) updateFields.email = updateData.email;
+            if (updateData.phone !== undefined) updateFields.phone = updateData.phone;
+            if (updateData.role !== undefined) updateFields.role = updateData.role;
+            if (updateData.active !== undefined) updateFields.active = updateData.active ? 1 : 0;
+            
+            // Оновлюємо користувача
+            const updatedUser = await this.userQueries.update(userId, updateFields);
+            
+            await this._logUserAudit(userId, 'USER_UPDATED', {
+                username: user.username,
+                updated_fields: Object.keys(updateFields),
+                updated_by: adminId
+            });
+            
+            console.log(`👤 Оновлено користувача: ${user.username} (ID: ${userId})`);
+            
+            return {
+                id: userId,
+                username: updateFields.username || user.username,
+                email: updateFields.email || user.email,
+                phone: updateFields.phone || user.phone,
+                role: updateFields.role || user.role,
+                active: updateFields.active !== undefined ? updateFields.active : user.active,
+                updated_at: new Date().toISOString()
+            };
+        } catch (error) {
+            if (error instanceof NotFoundError || error instanceof ValidationError) {
+                throw error;
+            }
+            console.error('❌ Помилка оновлення користувача:', error);
+            throw new DatabaseError(`Помилка оновлення користувача: ${error.message}`);
+        }
+    }
+    
+    /**
+     * Видалення користувача
+     */
+    async deleteUser(userId, adminId) {
+        this._checkInitialization();
+        
+        try {
+            const user = await this.userQueries.getById(userId);
+            if (!user) {
+                throw new NotFoundError('Користувача не знайдено');
+            }
+            
+            // Не дозволяємо видаляти системного адміністратора
+            if (userId === 1) {
+                throw new ValidationError('Неможливо видалити системного адміністратора');
+            }
+            
+            // Видаляємо користувача
+            await this.userQueries.delete(userId);
+            
+            await this._logUserAudit(userId, 'USER_DELETED', {
+                username: user.username,
+                deleted_by: adminId
+            });
+            
+            console.log(`👤 Видалено користувача: ${user.username} (ID: ${userId})`);
+            
+            return true;
+        } catch (error) {
+            if (error instanceof NotFoundError || error instanceof ValidationError) {
+                throw error;
+            }
+            console.error('❌ Помилка видалення користувача:', error);
+            throw new DatabaseError(`Помилка видалення користувача: ${error.message}`);
         }
     }
 

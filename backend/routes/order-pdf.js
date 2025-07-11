@@ -26,7 +26,7 @@ function initPdfRoutes(dependencies) {
 function getDependencies() {
     if (!orderQueries || !productQueries) {
         try {
-            const database = require('../database');
+            const database = require('../supabase-database');
             orderQueries = database.orderQueries;
             productQueries = database.productQueries;
             console.log('[HTML Router] Залежності отримані з database.js');

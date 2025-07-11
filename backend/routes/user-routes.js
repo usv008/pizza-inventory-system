@@ -40,7 +40,8 @@ router.get('/', requireAdmin, async (req, res, next) => {
             includeInactive: include_inactive === 'true'
         });
         
-        res.json(formatResponse(users, 'Список користувачів отримано успішно'));
+        // Return clean array for frontend compatibility (no wrapper)
+        res.json(users);
     } catch (error) {
         next(error);
     }

@@ -49,18 +49,8 @@ router.get('/', handleAsync(async (req, res) => {
 
     const result = await writeoffService.getAllWriteoffs(filters);
 
-    res.json({
-        success: true,
-        data: result.writeoffs,
-        meta: {
-            ...result.meta,
-            message: result.writeoffs.length > 0 ? 
-                `Знайдено ${result.writeoffs.length} записів списання` : 
-                'Списання не знайдено',
-            endpoint: 'GET /api/writeoffs',
-            timestamp: new Date().toISOString()
-        }
-    });
+    // Return clean array for frontend compatibility (no wrapper)
+    res.json(result.writeoffs || result);
 }));
 
 /**

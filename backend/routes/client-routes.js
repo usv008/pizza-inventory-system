@@ -18,14 +18,8 @@ const clientService = require('../services/clientService');
 router.get('/', handleAsync(async (req, res) => {
     const clients = await clientService.getAllClients();
     
-    res.json({
-        success: true,
-        data: clients,
-        meta: {
-            total: clients.length,
-            timestamp: new Date().toISOString()
-        }
-    });
+    // Return clean array for frontend compatibility (no wrapper)
+    res.json(clients);
 }));
 
 /**

@@ -1,4 +1,5 @@
 const { DatabaseError, NotFoundError, ValidationError } = require('../middleware/errors/AppError');
+const BatchReservationHelper = require('../utils/batchReservationHelper');
 
 /**
  * Сервіс для роботи з замовленнями
@@ -19,6 +20,7 @@ class OrderService {
     initialize(dependencies) {
         this.orderQueries = dependencies.orderQueries;
         this.productQueries = dependencies.productQueries;
+        this.batchQueries = dependencies.batchQueries; // Додано для batch integration
         this.batchController = dependencies.batchController;
         this.OperationsLogController = dependencies.OperationsLogController;
         this.initialized = true;
@@ -115,30 +117,39 @@ class OrderService {
             
             console.log(`✅ Створено замовлення: ${result.order_number} (ID: ${result.id})`);
 
-            // Спробуємо зарезервувати партії
+            // Резервуємо партії для нового замовлення
             let batchReservations = null;
             let warnings = null;
 
-            if (this.batchController) {
+            if (this.batchQueries && orderData.items && orderData.items.length > 0) {
                 try {
-                    const reservationResult = await this._reserveBatchesForNewOrder(result.id, orderData.items);
+                    const reservationResult = await BatchReservationHelper.reserveBatchesForOrder(
+                        orderData.items,
+                        this.batchQueries
+                    );
+                    
                     batchReservations = reservationResult.reservations;
                     warnings = reservationResult.warnings;
+                    
+                    console.log(`📦 Batch reservations: ${reservationResult.summary.total_reserved}/${reservationResult.summary.total_requested} шт`);
+                    
                 } catch (batchError) {
                     console.warn('⚠️ Помилка резервування партій:', batchError.message);
                     warnings = [`Помилка резервування партій: ${batchError.message}`];
                 }
             }
 
-            // Логуємо операцію
-            await this._logOrderOperation('CREATE_ORDER', result.id, {
-                operation_id: result.id,
-                entity_type: 'order',
-                entity_id: result.id,
-                new_data: orderData,
-                description: `Створено замовлення "${result.order_number}"`,
-                ...auditInfo
-            });
+            // Логуємо операцію з batch details
+            const logDetails = {
+                order_number: result.order_number,
+                client_id: orderData.client_id,
+                items_count: orderData.items?.length || 0,
+                total_pieces: orderData.items?.reduce((sum, item) => sum + (item.pieces || item.quantity || 0), 0) || 0,
+                batch_reservations: batchReservations ? BatchReservationHelper.formatReservationForLog({ success: true, reservations: batchReservations, warnings, summary: { total_reserved: batchReservations.reduce((sum, r) => sum + r.reserved_quantity, 0) } }) : null,
+                warnings_count: warnings?.length || 0
+            };
+            
+            await this._logOrderOperation('CREATE_ORDER', result.id, logDetails, auditInfo);
 
             return {
                 id: result.id,

@@ -10,6 +10,7 @@ const { validateOrder, validateOrderId, validateOrderStatus, validateOrderUpdate
 
 // Service
 const orderService = require('../services/orderService');
+const BatchReservationHelper = require('../utils/batchReservationHelper');
 
 /**
  * @api {get} /api/orders Get all orders
@@ -299,6 +300,62 @@ router.delete('/orders/:id/unreserve-batches', validateOrderId, handleAsync(asyn
         meta: {
             operation: 'unreserve_batches',
             freed_batches: result.freed_count || 0,
+            timestamp: new Date().toISOString()
+        }
+    });
+}));
+
+/**
+ * @api {post} /api/orders/check-availability Check product availability
+ * @apiDescription Перевірити доступність товарів з партій перед створенням замовлення
+ */
+router.post('/check-availability', handleAsync(async (req, res) => {
+    const { items } = req.body;
+    
+    if (!items || !Array.isArray(items) || items.length === 0) {
+        throw new ValidationError('Необхідно вказати список товарів для перевірки');
+    }
+    
+    // Отримуємо batchQueries з orderService
+    const batchQueries = orderService.batchQueries;
+    
+    if (!batchQueries) {
+        return res.json({
+            success: false,
+            error: 'Batch система недоступна',
+            data: null
+        });
+    }
+    
+    // Перевіряємо доступність
+    const productIds = items.map(item => item.product_id);
+    const availability = await BatchReservationHelper.getProductAvailability(productIds, batchQueries);
+    
+    // Симулюємо резервування щоб показати що буде
+    const simulationResult = await BatchReservationHelper.reserveBatchesForOrder(items, batchQueries);
+    
+    res.json({
+        success: true,
+        data: {
+            availability: availability,
+            simulation: {
+                can_fulfill: simulationResult.summary.shortage === 0,
+                total_requested: simulationResult.summary.total_requested,
+                total_available: simulationResult.summary.total_reserved,
+                shortage: simulationResult.summary.shortage,
+                warnings: simulationResult.warnings,
+                products_status: simulationResult.reservations.map(r => ({
+                    product_id: r.product_id,
+                    requested: r.requested_quantity,
+                    available: r.reserved_quantity,
+                    shortage: r.shortage,
+                    can_fulfill: r.shortage === 0
+                }))
+            }
+        },
+        meta: {
+            operation: 'check_availability',
+            products_checked: productIds.length,
             timestamp: new Date().toISOString()
         }
     });

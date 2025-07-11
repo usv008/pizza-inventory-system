@@ -189,7 +189,7 @@
     <script src="/js/navigation.js"></script>
     
     <script>
-        const API_URL = '/api';
+        const API_URL = 'http://localhost:3000/api';
         let currentEditId = null;
         
      // Функція екранування HTML для захисту від XSS
@@ -264,11 +264,12 @@ function escapeHtml(text) {
                      const batchesData = await batchesResponse.json();
                      // Обробляємо null значення - коли товар без партій
                      totalStock = batchesData.reduce((sum, p) => {
-                         const available = p.total_available !== null && p.total_available !== undefined ? p.total_available : 0;
+                         const available = p.available_quantity !== null && p.available_quantity !== undefined ? p.available_quantity : 0;
                          return sum + available;
                      }, 0);
                      totalBoxes = batchesData.reduce((sum, p) => {
-                         const boxes = p.total_boxes !== null && p.total_boxes !== undefined ? p.total_boxes : 0;
+                         const available = p.available_quantity !== null && p.available_quantity !== undefined ? p.available_quantity : 0;
+                         const boxes = Math.floor(available / (p.pieces_per_box || 1));
                          return sum + boxes;
                      }, 0);
                     

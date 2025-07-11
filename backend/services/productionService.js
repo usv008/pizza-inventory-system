@@ -161,9 +161,27 @@ class ProductionService {
             // Створюємо запис виробництва
             const result = await this.productionQueries.create(productionData);
             
-            // Логуємо операцію
-            if (this.OperationsLogController) {
-                await this._logProductionOperation(productionData, result, 'CREATE', req);
+            // Логуємо операцію з user context
+            if (req && req.logOperation) {
+                await req.logOperation(
+                    'PRODUCTION_CREATE',
+                    {
+                        product_id: productionData.product_id,
+                        total_quantity: productionData.total_quantity,
+                        production_date: productionData.production_date,
+                        batch_created: result.batch_created || false
+                    },
+                    'PRODUCTION',
+                    result.id
+                );
+            } else if (this.OperationsLogController) {
+                // Fallback для прямих викликів без req
+                await this.OperationsLogController.logProductOperation(
+                    productionData.product_id,
+                    'PRODUCTION_CREATE',
+                    productionData.total_quantity,
+                    { production_date: productionData.production_date }
+                );
             }
             
             console.log(`✅ Виробництво створено: ID ${result.id}, товар ${productionData.product_id}, кількість ${productionData.total_quantity}`);
