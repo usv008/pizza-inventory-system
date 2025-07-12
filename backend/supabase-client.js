@@ -1,10 +1,26 @@
 const { createClient } = require('@supabase/supabase-js');
 
+// Завантажуємо змінні середовища з .env файлу
+require('dotenv').config();
+
 console.log('[SUPABASE] Ініціалізація Supabase клієнта...');
 
 // Створюємо Supabase клієнт
-const supabaseUrl = process.env.SUPABASE_URL || 'https://wncukuajzygzyasofyoe.supabase.co';
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InduY3VrdWFqenlnenlhc29meW9lIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0ODUxNDE5MSwiZXhwIjoyMDY0MDkwMTkxfQ.arten1xRuJicEJEY7mHuet7eQqjuTb24VLwTtcB91yM';
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Перевіряємо наявність обов'язкових змінних середовища
+if (!supabaseUrl) {
+    console.error('❌ ПОМИЛКА: SUPABASE_URL не знайдено в змінних середовища');
+    console.error('💡 Переконайтесь що файл .env існує і містить SUPABASE_URL');
+    process.exit(1);
+}
+
+if (!supabaseKey) {
+    console.error('❌ ПОМИЛКА: SUPABASE_SERVICE_ROLE_KEY не знайдено в змінних середовища');
+    console.error('💡 Переконайтесь що файл .env існує і містить SUPABASE_SERVICE_ROLE_KEY');
+    process.exit(1);
+}
 
 console.log('🔧 Використовую Supabase URL:', supabaseUrl);
 console.log('🔧 Використовую Supabase KEY:', supabaseKey ? supabaseKey.substring(0, 20) + '...' : 'ВІДСУТНІЙ');
