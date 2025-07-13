@@ -757,7 +757,15 @@ const writeoffQueries = {
                 .order('writeoff_date', { ascending: false });
                 
             if (error) handleSupabaseError(error, 'writeoffQueries.getAll');
-            return data;
+            
+            // Трансформуємо дані для сумісності з фронтендом
+            const transformedData = data.map(item => ({
+                ...item,
+                product_name: item.products?.name,
+                product_code: item.products?.code
+            }));
+            
+            return transformedData;
         } catch (err) {
             throw new Error(`writeoffQueries.getAll: ${err.message}`);
         }
@@ -783,12 +791,23 @@ const writeoffQueries = {
         try {
             const { data, error } = await supabase
                 .from('writeoffs')
-                .select('*')
+                .select(`
+                    *,
+                    products (name, code)
+                `)
                 .eq('product_id', productId)
                 .order('writeoff_date', { ascending: false });
                 
             if (error) handleSupabaseError(error, 'writeoffQueries.getByProduct');
-            return data;
+            
+            // Трансформуємо дані для сумісності з фронтендом
+            const transformedData = data.map(item => ({
+                ...item,
+                product_name: item.products?.name,
+                product_code: item.products?.code
+            }));
+            
+            return transformedData;
         } catch (err) {
             throw new Error(`writeoffQueries.getByProduct: ${err.message}`);
         }
