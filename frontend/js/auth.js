@@ -2,7 +2,8 @@
 
 class AuthManager {
     constructor() {
-        this.apiUrl = 'http://localhost:3000/api';
+        // FIX: Use dynamic API URL instead of hardcoded localhost
+        this.apiUrl = window.location.origin + '/api';
         this.currentUser = null;
         this.storageKey = 'pizza_user';
     }
@@ -15,7 +16,9 @@ class AuthManager {
             if (userData) {
                 const user = JSON.parse(userData);
                 // Перевіряємо чи користувач ще активний в системі
-                const response = await fetch(`${this.apiUrl}/auth/users`);
+                const response = await fetch(`${this.apiUrl}/auth/users`, {
+                    credentials: 'include' // KEY FIX: Send session cookies
+                });
                 
                 if (response.ok) {
                     const apiData = await response.json();
@@ -73,7 +76,13 @@ class AuthManager {
 
     // Перевірка чи користувач - директор
     isDirector() {
-        return this.hasRole('ДИРЕКТОР');
+        const result = this.hasRole('ДИРЕКТОР');
+        console.log('isDirector check:', {
+            currentUser: this.currentUser,
+            role: this.currentUser?.role,
+            hasDirectorRole: result
+        });
+        return result;
     }
 
     // Вихід з системи
@@ -163,11 +172,27 @@ class AuthManager {
         if (userInfo && this.currentUser) {
             userInfo.innerHTML = `
                 <div class="user-menu">
-                    <span class="user-name">👤 ${this.currentUser.username}</span>
-                    <span class="user-role">(${this.currentUser.role})</span>
-                    <button onclick="authManager.logout()" class="btn btn-secondary btn-small">Вихід</button>
+                    <button class="user-button" onclick="toggleUserMenu()">
+                        👤 ${this.currentUser.username} ▼
+                    </button>
+                    <div class="user-dropdown" id="user-dropdown">
+                        <a href="#" onclick="showProfileModal(); return false;">
+                            👤 Профіль
+                        </a>
+                        <a href="#" onclick="showChangePasswordModal(); return false;">
+                            🔑 Змінити пароль
+                        </a>
+                        <a href="#" onclick="authManager.logout(); return false;">
+                            🚪 Вихід
+                        </a>
+                    </div>
                 </div>
             `;
+        }
+        
+        // Оновлюємо навігацію для директорів
+        if (typeof window.navigation !== 'undefined') {
+            window.navigation.addAdminNavItems();
         }
     }
 
@@ -206,9 +231,20 @@ class AuthManager {
         const userElement = document.createElement('div');
         userElement.className = 'user-menu';
         userElement.innerHTML = `
-            <span class="user-name">👤 ${this.currentUser.username}</span>
-            <span class="user-role">(${this.currentUser.role})</span>
-            <button onclick="authManager.logout()" class="btn btn-secondary btn-small">Вихід</button>
+            <button class="user-button" onclick="toggleUserMenu()">
+                👤 ${this.currentUser.username} ▼
+            </button>
+            <div class="user-dropdown" id="user-dropdown">
+                <a href="#" onclick="showProfileModal(); return false;">
+                    👤 Профіль
+                </a>
+                <a href="#" onclick="showChangePasswordModal(); return false;">
+                    🔑 Змінити пароль
+                </a>
+                <a href="#" onclick="authManager.logout(); return false;">
+                    🚪 Вихід
+                </a>
+            </div>
         `;
         
         return userElement;
@@ -226,16 +262,167 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Функції для сумісності з існуючим кодом
 function toggleUserMenu() {
-    // Базова функція для сумісності
-    console.log('User menu toggle');
+    const dropdown = document.getElementById('user-dropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('show');
+    }
 }
 
 function showUserProfile() {
     if (authManager.currentUser) {
-        alert(`Користувач: ${authManager.currentUser.username}\nРоль: ${authManager.currentUser.role}`);
+        // Закриваємо dropdown
+        const dropdown = document.getElementById('user-dropdown');
+        if (dropdown) {
+            dropdown.classList.remove('show');
+        }
+        
+        // Показуємо модальне вікно профілю
+        showProfileModal();
     }
 }
 
 function changePassword() {
-    alert('Функція зміни пароля поки не реалізована');
+    // Закриваємо dropdown
+    const dropdown = document.getElementById('user-dropdown-content');
+    if (dropdown) {
+        dropdown.classList.remove('show');
+    }
+    
+    // Показуємо модальне вікно зміни пароля
+    showChangePasswordModal();
 }
+
+// Функція для показу профілю користувача
+function showProfileModal() {
+    const user = authManager.currentUser;
+    if (!user) return;
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>👤 Профіль користувача</h2>
+                <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="profile-info">
+                    <div class="form-group">
+                        <label>Користувач:</label>
+                        <span class="profile-value">${user.username}</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Роль:</label>
+                        <span class="profile-value">${authManager.getRoleLabel(user.role)}</span>
+                    </div>
+                    ${user.email ? `
+                        <div class="form-group">
+                            <label>Email:</label>
+                            <span class="profile-value">${user.email}</span>
+                        </div>
+                    ` : ''}
+                    <div class="form-group">
+                        <label>Час входу:</label>
+                        <span class="profile-value">${new Date(user.loginTime).toLocaleString('uk-UA')}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="changePassword()">🔑 Змінити пароль</button>
+                <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">❌ Закрити</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'block';
+}
+
+// Функція для зміни пароля
+function showChangePasswordModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🔑 Зміна пароля</h2>
+                <span class="close" onclick="this.closest('.modal').remove()">&times;</span>
+            </div>
+            <form id="change-password-form">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="current-password">Поточний пароль *</label>
+                        <input type="password" id="current-password" name="current-password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-password">Новий пароль *</label>
+                        <input type="password" id="new-password" name="new-password" required minlength="6">
+                        <small>Мінімум 6 символів</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm-password">Підтвердити пароль *</label>
+                        <input type="password" id="confirm-password" name="confirm-password" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">💾 Зберегти</button>
+                    <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">❌ Скасувати</button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.style.display = 'block';
+    
+    // Обробка форми
+    document.getElementById('change-password-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const currentPassword = document.getElementById('current-password').value;
+        const newPassword = document.getElementById('new-password').value;
+        const confirmPassword = document.getElementById('confirm-password').value;
+        
+        if (newPassword !== confirmPassword) {
+            alert('Паролі не співпадають');
+            return;
+        }
+        
+        try {
+            // Відправляємо запит на зміну пароля
+            const response = await fetch(`${authManager.apiUrl}/auth/change-password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    currentPassword: currentPassword,
+                    newPassword: newPassword
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                alert('✅ Пароль успішно змінено!');
+                modal.remove();
+            } else {
+                alert('❌ Помилка: ' + (result.error?.details || result.error?.message || 'Невідома помилка'));
+            }
+        } catch (error) {
+            console.error('Error changing password:', error);
+            alert('❌ Помилка з\'єднання з сервером');
+        }
+    });
+}
+
+// Закриття dropdown при кліку поза ним
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('user-dropdown');
+    const userButton = document.querySelector('.user-button');
+    
+    if (dropdown && userButton && !userButton.contains(event.target) && !dropdown.contains(event.target)) {
+        dropdown.classList.remove('show');
+    }
+});

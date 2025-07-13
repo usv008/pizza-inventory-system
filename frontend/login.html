@@ -8,151 +8,7 @@
     <link rel="stylesheet" href="/styles/main.css">
     <link rel="stylesheet" href="/styles/forms.css">
     <link rel="stylesheet" href="/styles/buttons.css">
-    
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-        
-        .login-container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-            padding: 3rem;
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-        
-        .login-header {
-            margin-bottom: 2rem;
-        }
-        
-        .login-header h1 {
-            color: #2c3e50;
-            font-size: 2.5em;
-            margin-bottom: 0.5rem;
-        }
-        
-        .login-header p {
-            color: #7f8c8d;
-            font-size: 1.1em;
-        }
-        
-        .login-form {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-        
-        .form-group {
-            text-align: left;
-        }
-        
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #2c3e50;
-            font-weight: 500;
-        }
-        
-        .form-group input {
-            width: 100%;
-            padding: 1rem;
-            border: 2px solid #ecf0f1;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: border-color 0.3s;
-            box-sizing: border-box;
-        }
-        
-        .form-group select {
-            width: 100%;
-            padding: 1rem;
-            border: 2px solid #ecf0f1;
-            border-radius: 10px;
-            font-size: 1rem;
-            transition: border-color 0.3s;
-            box-sizing: border-box;
-            background: white;
-            cursor: pointer;
-        }
-        
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .login-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1rem 2rem;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        
-        .login-btn:hover {
-            transform: translateY(-2px);
-        }
-        
-        .login-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .error-message {
-            background: #fee;
-            color: #c0392b;
-            padding: 1rem;
-            border-radius: 10px;
-            margin-bottom: 1rem;
-            display: none;
-        }
-        
-        .success-message {
-            background: #eafaf1;
-            color: #27ae60;
-            padding: 1rem;
-            border-radius: 10px;
-            margin-bottom: 1rem;
-            display: none;
-        }
-        
-        .loading {
-            display: none;
-            color: #7f8c8d;
-            margin-top: 1rem;
-        }
-        
-        .footer {
-            margin-top: 2rem;
-            color: #7f8c8d;
-            font-size: 0.9em;
-        }
-        
-        @media (max-width: 480px) {
-            .login-container {
-                padding: 2rem;
-                margin: 1rem;
-            }
-            
-            .login-header h1 {
-                font-size: 2em;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="/styles/login.css">
 </head>
 <body>
     <div class="login-container">
@@ -193,7 +49,7 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:3000/api';
+        const API_URL = window.location.origin + '/api';
         
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Login page loaded, loading users...');
@@ -217,34 +73,62 @@
             hideMessages();
             
             try {
-                const response = await fetch(API_URL + "/auth/users");
-                const userData = await response.json();
+                // Використовуємо правильний API для аутентифікації
+                const response = await fetch(API_URL + "/auth/login", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include', // Важливо для сесій
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
                 
                 if (response.ok) {
-                    // Handle both array format and wrapper format
-                    const users = Array.isArray(userData) ? userData : (userData.data || []);
-                    const user = users.find(u => u.username === username && u.active === 1);
+                    const result = await response.json();
+                    console.log('Login response:', result);
                     
-                    if (user) {
-                        localStorage.setItem('pizza_user', JSON.stringify({
-                            id: user.id,
-                            username: user.username,
-                            role: user.role,
-                            email: user.email,
+                    if (result.success) {
+                        // Зберігаємо дані користувача в localStorage
+                        const userData = {
+                            id: result.data.user.id,
+                            username: result.data.user.username,
+                            role: result.data.user.role,
+                            email: result.data.user.email,
                             loginTime: new Date().toISOString()
-                        }));
+                        };
+                        
+                        localStorage.setItem('pizza_user', JSON.stringify(userData));
+                        console.log('User data saved to localStorage:', userData);
                         
                         showSuccess('Успішний вхід! Перенаправлення...');
                         
                         setTimeout(() => {
                             window.location.href = '/';
                         }, 1000);
-                        
                     } else {
-                        showError('Користувача не знайдено або акаунт неактивний');
+                        showError(result.message || 'Помилка входу');
                     }
                 } else {
-                    showError('Помилка перевірки користувача');
+                    const errorData = await response.json().catch(() => null);
+                    const errorMessage = errorData?.message || 'Помилка аутентифікації';
+                    
+                    console.error('Login failed:', errorMessage);
+                    
+                    // Перевіряємо специфічні помилки
+                    if (errorMessage.includes('Пароль не встановлений')) {
+                        showPasswordSetupModal(username);
+                    } else if (errorMessage.includes('Неправильний пароль')) {
+                        showError('Неправильний пароль');
+                    } else if (errorMessage.includes('Користувача не знайдено')) {
+                        showError('Користувача не знайдено');
+                    } else if (errorMessage.includes('деактивований')) {
+                        showError('Акаунт деактивовано');
+                    } else {
+                        showError(errorMessage);
+                    }
                 }
                 
             } catch (error) {
@@ -356,6 +240,100 @@
                 loginBtn.innerHTML = '🔐 Увійти';
                 loadingDiv.style.display = 'none';
                 form.style.opacity = '1';
+            }
+        }
+
+        // Модальне вікно для встановлення пароля при першому вході
+        function showPasswordSetupModal(username) {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>🔐 Встановлення пароля</h3>
+                    </div>
+                    <div class="modal-body">
+                        <p>Для користувача <strong>${username}</strong> не встановлено пароль.</p>
+                        <p>Будь ласка, встановіть пароль для першого входу:</p>
+                        <form id="password-setup-form">
+                            <div class="form-group">
+                                <label for="new-password">Новий пароль:</label>
+                                <input type="password" id="new-password" name="new-password" required minlength="6">
+                            </div>
+                            <div class="form-group">
+                                <label for="confirm-password">Підтвердити пароль:</label>
+                                <input type="password" id="confirm-password" name="confirm-password" required minlength="6">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" onclick="closePasswordSetupModal()">
+                            Скасувати
+                        </button>
+                        <button class="btn btn-primary" onclick="submitPasswordSetup('${username}')">
+                            Встановити пароль
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        function closePasswordSetupModal() {
+            const modal = document.querySelector('.modal-overlay');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        async function submitPasswordSetup(username) {
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            
+            if (newPassword !== confirmPassword) {
+                showError('Паролі не співпадають!');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                showError('Пароль повинен містити принаймні 6 символів!');
+                return;
+            }
+            
+            try {
+                // Спочатку отримаємо ID користувача
+                const usersResponse = await fetch(API_URL + "/auth/users");
+                const users = await usersResponse.json();
+                const user = users.find(u => u.username === username);
+                
+                if (!user) {
+                    showError('Користувача не знайдено');
+                    return;
+                }
+                
+                // Встановлюємо пароль
+                const response = await fetch(API_URL + "/auth/set-password", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: user.id,
+                        password: newPassword
+                    })
+                });
+                
+                if (response.ok) {
+                    closePasswordSetupModal();
+                    showSuccess('Пароль встановлено успішно! Тепер ви можете увійти.');
+                } else {
+                    const errorData = await response.json().catch(() => null);
+                    showError(errorData?.message || 'Помилка встановлення пароля');
+                }
+            } catch (error) {
+                console.error('Password setup error:', error);
+                showError('Помилка з\'єднання з сервером');
             }
         }
     </script>

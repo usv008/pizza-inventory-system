@@ -2,7 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
+// const SQLiteStore = require('connect-sqlite3')(session); // Замінено на Supabase
+const SupabaseSessionStoreDev = require('./middleware/supabase-session-store-dev');
+const { supabase } = require('./supabase-client');
 
 // Middleware
 const { globalErrorHandler, notFoundHandler } = require('./middleware/errorHandler');
@@ -44,7 +46,16 @@ const PORT = 3000;
 // ================================
 app.use(cors());
 app.use(express.json());
-app.use(express.static('./frontend'));
+app.use(express.static('../frontend', {
+    etag: false,
+    maxAge: 0,
+    cacheControl: false,
+    setHeaders: (res, path) => {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+    }
+}));
 
 // Debug middleware - логування всіх запитів
 app.use((req, res, next) => {
@@ -53,13 +64,14 @@ app.use((req, res, next) => {
     next();
 });
 
-// Session configuration
+// Session configuration - MIGRATED TO SUPABASE
+const sessionStore = new SupabaseSessionStoreDev({
+    supabase: supabase,
+    cleanupInterval: 15 * 60 * 1000 // 15 хвилин
+});
+
 app.use(session({
-    store: new SQLiteStore({
-        db: 'sessions.db',
-        dir: '.',
-        table: 'sessions'
-    }),
+    store: sessionStore,
     secret: 'pizza-system-secret-key-2024',
     resave: false,
     saveUninitialized: false,
@@ -69,6 +81,9 @@ app.use(session({
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     }
 }));
+
+// Зберігаємо session store для статистики
+app.locals.sessionStore = sessionStore;
 
 // User context middleware for operations logging
 app.use(userContextMiddleware);

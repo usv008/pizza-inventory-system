@@ -373,6 +373,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Ініціалізуємо навігацію
         const nav = new PizzaNavigation();
+        window.navigation = nav; // Експортуємо в глобальну область
         nav.init();
         
     } catch (error) {

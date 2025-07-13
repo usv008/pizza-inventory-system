@@ -120,27 +120,24 @@ class AuthService {
                 throw new ValidationError('Користувач деактивований');
             }
 
-            // Перевіряємо пароль
-            if (user.password_hash) {
-                const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-                if (!isPasswordValid) {
-                    await this._logSecurityEvent('LOGIN_FAILED', user.id, {
-                        username,
-                        reason: 'Invalid password',
-                        ...sessionInfo
-                    });
-                    throw new ValidationError('Неправильний пароль');
-                }
-            } else {
-                // Для першого входу, коли немає пароля
-                if (!user.first_login) {
-                    await this._logSecurityEvent('LOGIN_FAILED', user.id, {
-                        username,
-                        reason: 'No password set',
-                        ...sessionInfo
-                    });
-                    throw new ValidationError('Пароль не встановлений');
-                }
+            // Перевіряємо пароль - ОБОВ'ЯЗКОВО для всіх користувачів
+            if (!user.password_hash) {
+                await this._logSecurityEvent('LOGIN_FAILED', user.id, {
+                    username,
+                    reason: 'No password set',
+                    ...sessionInfo
+                });
+                throw new ValidationError('Пароль не встановлений. Зверніться до адміністратора.');
+            }
+
+            const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+            if (!isPasswordValid) {
+                await this._logSecurityEvent('LOGIN_FAILED', user.id, {
+                    username,
+                    reason: 'Invalid password',
+                    ...sessionInfo
+                });
+                throw new ValidationError('Неправильний пароль');
             }
 
             // Успішний вхід
