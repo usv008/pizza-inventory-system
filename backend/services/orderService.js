@@ -131,6 +131,22 @@ class OrderService {
                     batchReservations = reservationResult.reservations;
                     warnings = reservationResult.warnings;
                     
+                    // Застосовуємо резервування в базі даних
+                    if (batchReservations && batchReservations.length > 0) {
+                        const applyResult = await BatchReservationHelper.applyReservations(
+                            batchReservations,
+                            this.batchQueries
+                        );
+                        
+                        if (!applyResult.success) {
+                            console.warn('⚠️ Проблеми застосування резервування:', applyResult.errors);
+                            warnings = warnings || [];
+                            warnings.push(...applyResult.errors.map(e => `Помилка резервування: ${e.error || e.general || JSON.stringify(e)}`));
+                        } else {
+                            console.log(`✅ Застосовано резервування: ${applyResult.summary.total_applied} шт в ${applyResult.summary.batches_updated} партіях`);
+                        }
+                    }
+                    
                     console.log(`📦 Batch reservations: ${reservationResult.summary.total_reserved}/${reservationResult.summary.total_requested} шт`);
                     
                 } catch (batchError) {

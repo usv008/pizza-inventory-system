@@ -1138,7 +1138,7 @@
                     <td>${escapeHtml(deliveryDate)}</td>
                     <td><span class="status-badge ${statusClass}">${escapeHtml(statusText)}</span></td>
                     <td>${escapeHtml(order.items_count || 0)}</td>
-                    <td>${escapeHtml(order.total_quantity || 0)} шт</td>
+                    <td>${escapeHtml(order.total_pieces || 0)} шт</td>
                     ${actionsHtml}
                 `);
                 tbody.appendChild(row);
@@ -1310,7 +1310,7 @@
                         </div>
                         <div class="summary-item">
                             <span class="summary-label">📦 Загальна кількість:</span>
-                            <span class="summary-value">${order.total_quantity} шт</span>
+                            <span class="summary-value">${order.total_pieces} шт</span>
                         </div>
                         <div class="summary-item">
                             <span class="summary-label">📦 Загальна кількість ящиків:</span>

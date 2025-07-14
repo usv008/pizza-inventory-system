@@ -55,7 +55,9 @@ class BatchReservationHelper {
                             production_id: batch.production_id,
                             batch_date: batch.batch_date,
                             expiry_date: batch.expiry_date,
+                            reserved_before: batch.reserved_quantity || 0,
                             reserved_quantity: canReserve,
+                            reserved_after: (batch.reserved_quantity || 0) + canReserve,
                             available_before: batch.available_quantity,
                             available_after: batch.available_quantity - canReserve
                         });
@@ -171,6 +173,69 @@ class BatchReservationHelper {
                 batches_used: r.batches.length
             }))
         };
+    }
+
+    /**
+     * Apply batch reservations to database
+     * @param {Array} reservations - Array of reservations from reserveBatchesForOrder
+     * @param {Object} batchQueries - Batch queries interface
+     * @returns {Object} Application result
+     */
+    static async applyReservations(reservations, batchQueries) {
+        try {
+            const appliedReservations = [];
+            const errors = [];
+            
+            for (const productReservation of reservations) {
+                for (const batchReservation of productReservation.batches) {
+                    try {
+                        // Оновлюємо партію в базі даних
+                        await batchQueries.updateQuantities(
+                            batchReservation.batch_id,
+                            {
+                                available_quantity: batchReservation.available_after,
+                                reserved_quantity: batchReservation.reserved_after
+                            }
+                        );
+                        
+                        appliedReservations.push({
+                            batch_id: batchReservation.batch_id,
+                            product_id: productReservation.product_id,
+                            reserved_quantity: batchReservation.reserved_after,
+                            batch_date: batchReservation.batch_date
+                        });
+                        
+                        console.log(`✅ Зарезервовано партію ${batchReservation.batch_id}: ${batchReservation.reserved_quantity} шт`);
+                        
+                    } catch (error) {
+                        console.error(`❌ Помилка резервування партії ${batchReservation.batch_id}:`, error);
+                        errors.push({
+                            batch_id: batchReservation.batch_id,
+                            error: error.message
+                        });
+                    }
+                }
+            }
+            
+            return {
+                success: errors.length === 0,
+                applied: appliedReservations,
+                errors: errors,
+                summary: {
+                    total_applied: appliedReservations.reduce((sum, r) => sum + r.reserved_quantity, 0),
+                    batches_updated: appliedReservations.length,
+                    errors_count: errors.length
+                }
+            };
+            
+        } catch (error) {
+            return {
+                success: false,
+                applied: [],
+                errors: [{ general: error.message }],
+                summary: { total_applied: 0, batches_updated: 0, errors_count: 1 }
+            };
+        }
     }
 }
 

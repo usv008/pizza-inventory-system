@@ -263,18 +263,66 @@ const productionQueries = {
                 
             if (productionError) handleSupabaseError(productionError, 'productionQueries.create.insertProduction');
             
-            // Create stock movement
-            await supabase
-                .from('stock_movements')
-                .insert({
-                    product_id,
-                    movement_type: 'PRODUCTION',
-                    pieces: total_quantity,
-                    boxes: boxes_quantity,
-                    reason: `Виробництво партії ${production_date}`,
-                    user: responsible || 'system',
-                    batch_date: production_date
-                });
+            // ================================
+            // CREATE OR UPDATE PRODUCTION BATCH FIRST
+            // ================================
+            // Перевіряємо чи існує партія з такою датою
+            const { data: existingBatch } = await supabase
+                .from('production_batches')
+                .select('id, total_quantity, available_quantity')
+                .eq('product_id', product_id)
+                .eq('batch_date', production_date)
+                .single();
+                
+            let batchId = null;
+            
+            if (existingBatch) {
+                // Оновлюємо існуючу партію
+                await supabase
+                    .from('production_batches')
+                    .update({
+                        total_quantity: existingBatch.total_quantity + total_quantity,
+                        available_quantity: existingBatch.available_quantity + total_quantity,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', existingBatch.id);
+                batchId = existingBatch.id;
+                console.log(`✅ Оновлено існуючу партію ${existingBatch.id}: +${total_quantity} шт`);
+            } else {
+                // Створюємо нову партію
+                const { data: newBatch, error: batchError } = await supabase
+                    .from('production_batches')
+                    .insert({
+                        product_id,
+                        batch_date: production_date,
+                        production_date: production_date,
+                        production_id: productionData.id,
+                        total_quantity,
+                        available_quantity: total_quantity,
+                        expiry_date,
+                        status: 'ACTIVE',
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    })
+                    .select('id')
+                    .single();
+                    
+                if (batchError) handleSupabaseError(batchError, 'productionQueries.create.createBatch');
+                batchId = newBatch.id;
+                console.log(`✅ Створено нову партію ${batchId}: товар ${product_id}, дата ${production_date}, кількість ${total_quantity}`);
+            }
+            
+            // Create stock movement using movementsQueries.create for consistency
+            await movementsQueries.create({
+                product_id,
+                movement_type: 'PRODUCTION',
+                pieces: total_quantity,
+                boxes: boxes_quantity,
+                reason: `Виробництво партії ${production_date}`,
+                user: responsible || 'system',
+                batch_id: batchId,
+                batch_date: production_date
+            });
             
             // Update product stock - get current stock first
             const { data: currentProduct, error: stockError } = await supabase
@@ -294,47 +342,6 @@ const productionQueries = {
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', product_id);
-            
-            // ================================
-            // CREATE OR UPDATE PRODUCTION BATCH
-            // ================================
-            // Перевіряємо чи існує партія з такою датою
-            const { data: existingBatch } = await supabase
-                .from('production_batches')
-                .select('id, total_quantity, available_quantity')
-                .eq('product_id', product_id)
-                .eq('batch_date', production_date)
-                .single();
-                
-            if (existingBatch) {
-                // Оновлюємо існуючу партію
-                await supabase
-                    .from('production_batches')
-                    .update({
-                        total_quantity: existingBatch.total_quantity + total_quantity,
-                        available_quantity: existingBatch.available_quantity + total_quantity,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', existingBatch.id);
-                console.log(`✅ Оновлено існуючу партію ${existingBatch.id}: +${total_quantity} шт`);
-            } else {
-                // Створюємо нову партію
-                await supabase
-                    .from('production_batches')
-                    .insert({
-                        product_id,
-                        batch_date: production_date,
-                        production_date: production_date,
-                        production_id: productionData.id,
-                        total_quantity,
-                        available_quantity: total_quantity,
-                        expiry_date,
-                        status: 'ACTIVE',
-                        created_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                    });
-                console.log(`✅ Створено нову партію: товар ${product_id}, дата ${production_date}, кількість ${total_quantity}`);
-            }
                 
             console.log(`✅ Створено партію для виробництва: товар ${product_id}, дата ${production_date}, кількість ${total_quantity}`);
                 
@@ -588,12 +595,7 @@ const orderQueries = {
                     *,
                     clients (name, contact_person),
                     order_items (
-                        id,
-                        product_id,
-                        quantity,
-                        pieces,
-                        boxes,
-                        notes,
+                        *,
                         products (name, code, pieces_per_box)
                     )
                 `)
@@ -644,7 +646,7 @@ const orderQueries = {
                     clients (name, contact_person),
                     order_items (
                         *,
-                        products (name, code)
+                        products (name, code, pieces_per_box)
                     )
                 `)
                 .eq('id', id)
@@ -653,6 +655,35 @@ const orderQueries = {
             if (error) {
                 if (error.code === 'PGRST116') return null;
                 handleSupabaseError(error, 'orderQueries.getById');
+            }
+            
+            // Додаємо обчислені поля та alias для сумісності
+            if (data) {
+                const enrichedItems = data.order_items?.map(item => {
+                    const piecesPerBox = item.products?.pieces_per_box || 1;
+                    const totalPieces = item.pieces || item.quantity || 0;
+                    const calculatedBoxes = Math.floor(totalPieces / piecesPerBox);
+                    const remainingPieces = totalPieces % piecesPerBox;
+                    
+                    return {
+                        ...item,
+                        product_name: item.products?.name || 'Невідомий товар',
+                        product_code: item.products?.code || '-',
+                        pieces_per_box: piecesPerBox,
+                        calculated_boxes: calculatedBoxes,
+                        remaining_pieces: remainingPieces,
+                        // Оновлюємо boxes якщо він не встановлений або некоректний
+                        boxes: item.boxes || calculatedBoxes
+                    };
+                }) || [];
+                
+                return {
+                    ...data,
+                    items_count: data.order_items?.length || 0,
+                    total_pieces: data.order_items?.reduce((sum, item) => sum + (item.pieces || item.quantity || 0), 0) || 0,
+                    total_boxes: enrichedItems.reduce((sum, item) => sum + (item.boxes || 0), 0) || 0,
+                    items: enrichedItems // Збагачені дані для frontend
+                };
             }
             
             return data;
@@ -709,15 +740,48 @@ const orderQueries = {
 
     update: async (id, order) => {
         try {
-            const { error } = await supabase
+            // Витягуємо items з order для окремої обробки
+            const { items, ...orderWithoutItems } = order;
+            
+            // Оновлюємо тільки поля замовлення (без items)
+            const { error: orderError } = await supabase
                 .from('orders')
                 .update({
-                    ...order,
+                    ...orderWithoutItems,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', id);
                 
-            if (error) handleSupabaseError(error, 'orderQueries.update');
+            if (orderError) handleSupabaseError(orderError, 'orderQueries.update.order');
+            
+            // Оновлюємо items якщо вони передані
+            if (items && items.length >= 0) {
+                // Спочатку видаляємо старі items
+                const { error: deleteError } = await supabase
+                    .from('order_items')
+                    .delete()
+                    .eq('order_id', id);
+                    
+                if (deleteError) handleSupabaseError(deleteError, 'orderQueries.update.deleteItems');
+                
+                // Додаємо нові items
+                if (items.length > 0) {
+                    const orderItems = items.map(item => ({
+                        order_id: id,
+                        product_id: item.product_id,
+                        quantity: item.quantity,
+                        pieces: item.pieces || item.quantity || 0,
+                        boxes: item.boxes || 0,
+                        notes: item.notes || ''
+                    }));
+                    
+                    const { error: itemsError } = await supabase
+                        .from('order_items')
+                        .insert(orderItems);
+                        
+                    if (itemsError) handleSupabaseError(itemsError, 'orderQueries.update.insertItems');
+                }
+            }
             
             return { changes: 1 };
         } catch (err) {
@@ -737,6 +801,29 @@ const orderQueries = {
             return { changes: 1 };
         } catch (err) {
             throw new Error(`orderQueries.delete: ${err.message}`);
+        }
+    },
+
+    getByProductId: async (productId) => {
+        try {
+            const { data, error } = await supabase
+                .from('production')
+                .select(`
+                    *,
+                    products (name, code)
+                `)
+                .eq('product_id', productId)
+                .order('production_date', { ascending: false });
+                
+            if (error) handleSupabaseError(error, 'productionQueries.getByProductId');
+            
+            return data.map(item => ({
+                ...item,
+                product_name: item.products?.name,
+                product_code: item.products?.code
+            }));
+        } catch (err) {
+            throw new Error(`productionQueries.getByProductId: ${err.message}`);
         }
     }
 };
@@ -843,9 +930,26 @@ const movementsQueries = {
 
     create: async (movement) => {
         try {
+            // Автоматично встановлюємо batch_id якщо він не вказаний
+            let enhancedMovement = movement;
+            
+            if (!movement.batch_id && movement.product_id) {
+                try {
+                    const BatchSelector = require('./utils/batchSelector');
+                    enhancedMovement = await BatchSelector.enhanceMovementWithBatch(movement, batchQueries);
+                    
+                    if (enhancedMovement.batch_id) {
+                        console.log(`✅ Автоматично встановлено batch_id: ${enhancedMovement.batch_id} для руху товару ${movement.product_id}`);
+                    }
+                } catch (batchError) {
+                    console.warn(`⚠️ Не вдалося автоматично встановити batch_id: ${batchError.message}`);
+                    // Продовжуємо без batch_id
+                }
+            }
+            
             const { data, error } = await supabase
                 .from('stock_movements')
-                .insert(movement)
+                .insert(enhancedMovement)
                 .select()
                 .single();
                 

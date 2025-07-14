@@ -1084,7 +1084,7 @@
         }
 
         function removeQuantityHint() {
-            const hint = safeQuerySelector('#quantity-hint');
+            const hint = document.querySelector('#quantity-hint');
             if (hint && hint.parentNode) {
                 try {
                     hint.parentNode.removeChild(hint);

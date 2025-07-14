@@ -167,9 +167,8 @@ class BatchController {
             const newBatch = await productionQueries.create({
                 product_id,
                 production_date: production_date || new Date().toISOString().split('T')[0],
+                production_time: '00:00:00', // Додаємо обов'язковий параметр
                 total_quantity,
-                available_quantity: total_quantity, // Вся кількість доступна спочатку
-                reserved_quantity: 0,
                 expiry_date,
                 responsible,
                 notes
