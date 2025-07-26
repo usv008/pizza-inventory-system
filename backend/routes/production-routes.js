@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 // Імпорти
-const productionService = require('../services/productionService');
+const productionService = require('../services/productionService-v2');
 const ProductionValidator = require('../validators/productionValidator');
 const { handleAsync } = require('../middleware/responseFormatter');
 
@@ -58,7 +58,11 @@ router.post('/',
     handleAsync(async (req, res) => {
         const productionData = req.body;
         
-        const result = await productionService.createProduction(productionData, req);
+        const result = await productionService.createProduction(productionData, {
+            user: req.body.responsible || 'system',
+            ip_address: req.ip,
+            user_agent: req.get('User-Agent')
+        });
         
         res.status(201).json({
             success: true,

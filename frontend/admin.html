@@ -261,7 +261,8 @@ function escapeHtml(text) {
                 let totalBoxes = 0;
                 
                                  if (batchesResponse.ok) {
-                     const batchesData = await batchesResponse.json();
+                     const batchesResponseData = await batchesResponse.json();
+                     const batchesData = batchesResponseData.success ? batchesResponseData.products : batchesResponseData;
                      // Обробляємо null значення - коли товар без партій
                      totalStock = batchesData.reduce((sum, p) => {
                          const available = p.total_available !== null && p.total_available !== undefined ? p.total_available : 0;

@@ -901,7 +901,8 @@
                 let totalBatches = 0;
                 
                                  if (batchesResponse.ok) {
-                     const batchesData = await batchesResponse.json();
+                     const batchesResponseData = await batchesResponse.json();
+                     const batchesData = batchesResponseData.success ? batchesResponseData.products : batchesResponseData;
                      // Обробляємо null значення - коли товар без партій
                      totalStock = batchesData.reduce((sum, p) => {
                          const available = p.total_available !== null && p.total_available !== undefined ? p.total_available : 0;
@@ -1318,7 +1319,8 @@
         
         if (!response.ok) throw new Error('Помилка завантаження партій');
         
-        const batchesData = await response.json();
+        const responseData = await response.json();
+        const batchesData = responseData.success ? responseData.products : responseData;
 console.log('Raw batches data received:', batchesData.length, 'products');
 
         // Застосовуємо фільтри якщо функція існує

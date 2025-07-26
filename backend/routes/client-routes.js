@@ -9,7 +9,7 @@ const { ValidationError, NotFoundError } = require('../middleware/errors/AppErro
 const { validateClient, validateClientId } = require('../validators/clientValidator');
 
 // Service
-const clientService = require('../services/clientService');
+const clientService = require('../services/clientService-v2');
 
 /**
  * @api {get} /api/clients Get all clients

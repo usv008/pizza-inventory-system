@@ -49,12 +49,14 @@ class OrderEditor {
                     const response = await fetch(`/api/products/${product.id}/batches`);
                     if (response.ok) {
                         const batchData = await response.json();
-                        // Обробляємо новий формат API: {success: true, data: [...]}
-                        const batches = batchData.success ? batchData.data : batchData;
-                        const totalAvailable = batches.reduce((sum, b) => sum + (b.available_quantity || 0), 0);
+                        // Обробляємо новий формат API: {success: true, batches: [...]}
+                        const batches = batchData.success ? batchData.batches : batchData;
+                        // Перевіряємо що batches є масивом
+                        const batchesArray = Array.isArray(batches) ? batches : [];
+                        const totalAvailable = batchesArray.reduce((sum, b) => sum + (b.available_quantity || 0), 0);
                         this.productBatches[product.id] = {
                             total_available: totalAvailable,
-                            batches: batches.filter(b => b.available_quantity > 0) // Тільки доступні партії
+                            batches: batchesArray.filter(b => b.available_quantity > 0) // Тільки доступні партії
                         };
                     } else {
                         this.productBatches[product.id] = { total_available: 0, batches: [] };

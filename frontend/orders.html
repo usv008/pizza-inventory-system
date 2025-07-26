@@ -551,11 +551,12 @@
                 const batchResponse = await fetch(`${API_URL}/products/${product.id}/batches`);
                 if (batchResponse.ok) {
                     const batchData = await batchResponse.json();
-                    const batches = batchData.success ? batchData.data : batchData;
-                    const totalAvailable = batches.reduce((sum, b) => sum + (b.available_quantity || 0), 0);
+                    const batches = batchData.success ? batchData.batches : batchData;
+                    const batchesArray = Array.isArray(batches) ? batches : [];
+                    const totalAvailable = batchesArray.reduce((sum, b) => sum + (b.available_quantity || 0), 0);
                     productBatches[product.id] = {
                         total_available: totalAvailable,
-                        batches: batches
+                        batches: batchesArray
                     };
                 } else {
                     productBatches[product.id] = { total_available: 0, batches: [] };

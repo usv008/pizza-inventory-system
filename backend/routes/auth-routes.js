@@ -5,29 +5,46 @@ const router = express.Router();
 const { handleAsync } = require('../middleware/responseFormatter');
 const { ValidationError, NotFoundError } = require('../middleware/errors/AppError');
 
-// Service
-const authService = require('../services/authService');
+// Service - використовуємо нову версію з підтримкою Supabase
+const authService = require('../services/authService-v2');
+
+// Простий тест маршрут
+router.get('/test', (req, res) => {
+    console.log('🔍 AUTH ROUTE TEST: Запит на /api/auth/test');
+    res.json({ message: 'Auth route works!' });
+});
 
 /**
  * @api {get} /api/auth/users Get all users for dropdown
  * @apiDescription Отримати список всіх активних користувачів для dropdown входу
  */
 router.get('/users', handleAsync(async (req, res) => {
-    const activeUsers = await authService.getActiveUsers();
+    console.log('🔍 AUTH ROUTE: Запит на /api/auth/users');
     
-    // Додаткова фільтрація на рівні route як запасний варіант
-    const filteredUsers = activeUsers.filter(user => user.active === 1);
-    
-    console.log(`🔍 Route: отримано ${activeUsers.length} користувачів, після фільтрації: ${filteredUsers.length}`);
-    
-    res.json({
-        success: true,
-        data: filteredUsers,
-        meta: {
-            total: filteredUsers.length,
-            timestamp: new Date().toISOString()
-        }
-    });
+    try {
+        const activeUsers = await authService.getActiveUsers();
+        console.log(`🔍 AUTH ROUTE: authService.getActiveUsers() повернув:`, activeUsers);
+        
+        // Додаткова фільтрація на рівні route як запасний варіант
+        const filteredUsers = activeUsers.filter(user => {
+            console.log(`🔍 AUTH ROUTE: Користувач ${user.username}, active: ${user.active} (type: ${typeof user.active})`);
+            return user.active === 1 || user.active === true;
+        });
+        
+        console.log(`🔍 AUTH ROUTE: отримано ${activeUsers.length} користувачів, після фільтрації: ${filteredUsers.length}`);
+        
+        res.json({
+            success: true,
+            data: filteredUsers,
+            meta: {
+                total: filteredUsers.length,
+                timestamp: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error('❌ AUTH ROUTE ERROR:', error);
+        throw error;
+    }
 }));
 
 /**

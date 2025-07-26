@@ -3,7 +3,7 @@ const { validationResult } = require('express-validator');
 const router = express.Router();
 
 const MovementValidator = require('../validators/movementValidator');
-const MovementService = require('../services/movementService');
+const MovementService = require('../services/movementService-v2');
 const { formatSuccess: formatResponse, formatError } = require('../middleware/responseFormatter');
 
 /**

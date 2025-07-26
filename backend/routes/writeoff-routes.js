@@ -1,5 +1,5 @@
 const express = require('express');
-const writeoffService = require('../services/writeoffService');
+const writeoffService = require('../services/writeoffService-v2');
 const { 
     validateCreateWriteoff, 
     validateIdParam, 
@@ -169,7 +169,7 @@ router.get('/statistics', handleAsync(async (req, res) => {
         });
     }
 
-    const result = await writeoffService.getWriteoffStatistics(period);
+    const result = await writeoffService.getWriteoffStatisticsByPeriod(period);
 
     res.json({
         success: true,

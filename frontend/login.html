@@ -347,7 +347,8 @@
             usernameSelect.appendChild(emptyOption);
             
             // Фільтруємо тільки активних користувачів (клієнтська фільтрація як запасний варіант)
-            const activeUsers = users.filter(user => user.active === 1);
+            // Підтримуємо як SQLite (1/0) так і Supabase (true/false) формати
+            const activeUsers = users.filter(user => user.active === 1 || user.active === true);
             console.log(`Отримано ${users.length} користувачів, з них ${activeUsers.length} активних`);
             
             // Додаємо активних користувачів

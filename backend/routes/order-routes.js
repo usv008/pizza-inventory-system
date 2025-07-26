@@ -9,7 +9,7 @@ const { ValidationError, NotFoundError } = require('../middleware/errors/AppErro
 const { validateOrder, validateOrderId, validateOrderStatus, validateOrderUpdate } = require('../validators/orderValidator');
 
 // Service
-const orderService = require('../services/orderService');
+const orderService = require('../services/orderService-v2');
 
 /**
  * @api {get} /api/orders Get all orders

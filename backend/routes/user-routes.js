@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const userService = require('../services/userService');
+const userService = require('../services/userService-v2');
 const permissionService = require('../services/permissionService');
 const { requireAuth, requireAdmin } = require('../middleware/authMiddleware');
 const { formatResponse } = require('../middleware/responseFormatter');

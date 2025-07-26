@@ -140,7 +140,8 @@
                     throw new Error(`HTTP error! status: ${batchesResponse.status}`);
                 }
                 
-                const productsWithBatches = await batchesResponse.json();
+                const batchesResponseData = await batchesResponse.json();
+                const productsWithBatches = batchesResponseData.success ? batchesResponseData.products : batchesResponseData;
                 displayPizzasWithBatches(productsWithBatches);
                 
                 // Оновлюємо статистику з комбінації API /stats та /batches/grouped

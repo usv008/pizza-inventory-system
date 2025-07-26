@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
+const SupabaseSessionStore = require('./middleware/SupabaseSessionStore');
 
 // Middleware
 const { globalErrorHandler, notFoundHandler } = require('./middleware/errorHandler');
@@ -21,16 +21,16 @@ const operationsLogRoutes = require('./routes/operations-log-routes');
 const authRoutes = require('./routes/auth-routes');
 const userRoutes = require('./routes/user-routes');
 
-// Services
-const productService = require('./services/productService');
-const clientService = require('./services/clientService');
-const orderService = require('./services/orderService');
-const productionService = require('./services/productionService');
-const writeoffService = require('./services/writeoffService');
-const movementService = require('./services/movementService');
-const authService = require('./services/authService');
+// Services - використовуємо нові версії з підтримкою Supabase
+const productService = require('./services/productService-v2');
+const clientService = require('./services/clientService-v2');
+const orderService = require('./services/orderService-v2');
+const productionService = require('./services/productionService-v2');
+const writeoffService = require('./services/writeoffService-v2');
+const movementService = require('./services/movementService-v2');
+const authService = require('./services/authService-v2');
 const permissionService = require('./services/permissionService');
-const userService = require('./services/userService');
+const userService = require('./services/userService-v2');
 
 const app = express();
 const PORT = 3000;
@@ -49,13 +49,18 @@ app.use((req, res, next) => {
     next();
 });
 
-// Session configuration
+// Session configuration with Supabase
+const sessionStore = new SupabaseSessionStore({
+    supabaseUrl: process.env.SUPABASE_URL,
+    supabaseKey: process.env.SUPABASE_SERVICE_KEY,
+    tableName: 'user_sessions'
+});
+
+// Start cleanup interval for expired sessions
+sessionStore.startCleanupInterval(60 * 60 * 1000); // 1 hour
+
 app.use(session({
-    store: new SQLiteStore({
-        db: 'sessions.db',
-        dir: '.',
-        table: 'sessions'
-    }),
+    store: sessionStore,
     secret: 'pizza-system-secret-key-2024',
     resave: false,
     saveUninitialized: false,
@@ -89,8 +94,8 @@ try {
     auditQueries = database.auditQueries || null;
     initDatabase = database.initDatabase;
     
-    // Operations Log Controller
-    OperationsLogController = require('./controllers/operations-log-controller');
+    // Operations Log Service v2 (заміщує контролер)
+    OperationsLogController = require('./services/operationsLogService-v2');
     
     if (typeof initDatabase !== 'function') {
         console.error('[DB LOG] FATAL: initDatabase не є функцією!');
@@ -102,55 +107,54 @@ try {
         console.log('🚀 База даних готова до роботи');
         
         // Ініціалізуємо сервіси з залежностями
+        // Нові v2 сервіси використовують DatabaseAdapter і потребують мінімальної ініціалізації
         productService.initialize({
-            productQueries,
             OperationsLogController
         });
         
         clientService.initialize({
-            clientQueries,
             OperationsLogController
         });
         
+        // Старі сервіси поки залишаємо як є
         orderService.initialize({
-            orderQueries,
-            productQueries,
-            clientQueries,
-            OperationsLogController
+            OperationsLogController,
+            batchController: null // поки не мігровано
         });
         
         productionService.initialize({
-            productionQueries,
-            productQueries,
             OperationsLogController
         });
         
         writeoffService.initialize({
-            writeoffQueries,
-            productQueries,
             OperationsLogController
         });
         
         movementService.initialize({
-            movementsQueries,
-            productQueries,
             OperationsLogController
         });
         
+        // Ініціалізуємо OperationsLogService v2
+        console.log('🔧 Ініціалізуємо operationsLogService-v2...');
+        OperationsLogController.initialize();
+        console.log('✅ operationsLogService-v2 ініціалізовано');
+        
+        // Нові v2 сервіси автентифікації
+        console.log('🔧 Ініціалізуємо authService-v2...');
         authService.initialize({
-            userQueries,
             sessionQueries,
             auditQueries
         });
+        console.log('✅ authService-v2 ініціалізовано');
+        
+        console.log('🔧 Ініціалізуємо userService-v2...');
+        userService.initialize({
+            auditQueries
+        });
+        console.log('✅ userService-v2 ініціалізовано');
         
         // Ініціалізуємо Permission Service
         permissionService.initialize();
-        
-        // Ініціалізуємо User Service
-        userService.initialize({
-            userQueries,
-            auditQueries
-        });
         
         // Ініціалізуємо PDF роути
         initPdfRoutes({
@@ -267,12 +271,32 @@ app.get('/api', (req, res) => {
 
 // Mount routes
 console.log('🔧 Mounting routes...');
+
+// Test simple route first
+app.get('/api/arrivals/test', (req, res) => {
+    res.json({ message: 'Test arrivals route works!' });
+});
+
+// Mount arrivals and operations-log first to avoid conflicts
+app.use('/api/arrivals', arrivalRoutes);
+console.log('✅ Arrival router mounted at /api/arrivals');
+
+app.use('/api/operations-log', operationsLogRoutes);
+console.log('✅ Operations log router mounted at /api/operations-log');
+
+// Mount other routes
+app.use('/api', batchRoutes);
+console.log('✅ Batch router mounted at /api');
+
 app.use('/api', productsRouter);
-console.log('✅ Products router mounted');
+console.log('✅ Products router mounted at /api');
+
 app.use('/api/auth', authRoutes);
-console.log('✅ Auth router mounted');
+console.log('✅ Auth router mounted at /api/auth');
+
 app.use('/api/users', userRoutes);
-console.log('✅ Users router mounted');
+console.log('✅ Users router mounted at /api/users');
+
 app.use('/api/clients', clientRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/production', productionRoutes);
@@ -280,9 +304,6 @@ app.use('/api/writeoffs', writeoffRoutes);
 app.use('/api/movements', movementRoutes);
 app.use(orderDocxRouter);
 app.use('/api', orderPdfRouter);
-app.use('/api', batchRoutes);
-app.use('/api/arrivals', arrivalRoutes);
-app.use('/api/operations', operationsLogRoutes);
 
 // ================================
 // LEGACY ENDPOINTS (TEMPORARY)

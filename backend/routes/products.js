@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const productService = require('../services/productService');
+const productService = require('../services/productService-v2');
 const { validateProduct, validateProductId } = require('../validators/productValidator');
 const responseFormatter = require('../middleware/responseFormatter');
 
